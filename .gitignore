@@ -7,7 +7,6 @@
 !/.yarn/releases
 !/.yarn/sdks
 !/.yarn/versions
-dist
 /node_modules
 /out
 /test-reports
