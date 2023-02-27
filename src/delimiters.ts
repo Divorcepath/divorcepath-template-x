@@ -4,6 +4,7 @@ export class Delimiters {
     public tagStart = "{";
     public tagEnd = "}";
     public containerTagOpen = "#";
+    public tableTagOpen = "%";
     public containerTagClose = "/";
 
     constructor(initial?: Partial<Delimiters>) {
@@ -16,7 +17,7 @@ export class Delimiters {
     }
 
     private encodeAndValidate() {
-        const keys: (keyof Delimiters)[] = ['tagStart', 'tagEnd', 'containerTagOpen', 'containerTagClose'];
+        const keys: (keyof Delimiters)[] = ['tagStart', 'tagEnd', 'containerTagOpen', 'containerTagClose', 'tableTagOpen'];
         for (const key of keys) {
 
             const value = this[key];

@@ -40,13 +40,15 @@ export class TemplateHandler {
         const tagParser = new TagParser(this.docxParser, this.options.delimiters as Delimiters);
 
         this.compiler = new TemplateCompiler(
+            this.options.delimiters,
             delimiterSearcher,
             tagParser,
             this.options.plugins,
             {
                 skipEmptyTags: this.options.skipEmptyTags,
                 defaultContentType: this.options.defaultContentType,
-                containerContentType: this.options.containerContentType
+                containerContentType: this.options.containerContentType,
+                tableContainerContentType: this.options.tableContainerContentType,
             }
         );
 

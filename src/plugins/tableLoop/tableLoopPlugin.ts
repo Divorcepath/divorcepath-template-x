@@ -3,17 +3,16 @@ import { TemplateData } from '../../templateData';
 import { last } from '../../utils';
 import { XmlNode } from '../../xml';
 import { PluginUtilities, TemplatePlugin } from '../templatePlugin';
-import { ILoopStrategy, LoopListStrategy, LoopParagraphStrategy } from './strategy';
+import { ILoopStrategy, LoopTableStrategy } from './strategy';
 
-export const LOOP_CONTENT_TYPE = 'loop';
+export const TABLE_LOOP_CONTENT_TYPE = 'table-loop';
 
-export class LoopPlugin extends TemplatePlugin {
+export class TableLoopPlugin extends TemplatePlugin {
 
-    public readonly contentType = LOOP_CONTENT_TYPE;
+    public readonly contentType = TABLE_LOOP_CONTENT_TYPE;
 
     private readonly loopStrategies: ILoopStrategy[] = [
-        new LoopListStrategy(),
-        new LoopParagraphStrategy() // the default strategy
+        new LoopTableStrategy(),
     ];
 
     public setUtilities(utilities: PluginUtilities): void {

@@ -1,6 +1,7 @@
 export * from './image';
 export * from './link';
 export * from './loop';
+export * from './tableLoop';
 export * from './rawXml';
 export * from './text';
 export * from './defaultPlugins';
