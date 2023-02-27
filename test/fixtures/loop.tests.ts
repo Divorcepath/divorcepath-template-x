@@ -35,7 +35,7 @@ describe('loop fixtures', () => {
 
         const template = readFixture("loop - table.docx");
         const templateText = await handler.getText(template);
-        expect(templateText.trim()).toEqual("{#loop}Repeat this text {prop} And this also…{/loop}");
+        expect(templateText.trim()).toEqual("{%loop}Repeat this text {prop} And this also…{/loop}");
 
         const data = {
             outProp: 'I am out!',
