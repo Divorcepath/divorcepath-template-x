@@ -1,6 +1,6 @@
 {
   "name": "easy-template-x",
-  "version": "3.0.4",
+  "version": "3.1.0",
   "description": "Generate docx documents from templates, in Node or in the browser.",
   "keywords": [
     "docx",
@@ -39,7 +39,7 @@
     "release": "yarn clean && yarn quality && yarn build"
   },
   "dependencies": {
-    "@xmldom/xmldom": "0.8.6",
+    "@xmldom/xmldom": "0.8.7",
     "jszip": "3.10.1",
     "lodash.get": "4.4.2"
   },

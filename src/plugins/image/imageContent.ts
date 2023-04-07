@@ -7,6 +7,10 @@ export type ImageFormat = MimeType.Jpeg | MimeType.Png | MimeType.Gif | MimeType
 export interface ImageContent extends PluginContent {
     _type: 'image';
     source: Binary;
+    /**
+     * Optional. If this is not set the image will be marked as "decorative".
+     */
+    altText?: string;
     format: ImageFormat;
     width: number;
     height: number;
