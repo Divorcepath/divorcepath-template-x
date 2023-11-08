@@ -18,6 +18,7 @@ export interface TemplateCompilerOptions {
     defaultContentType: string;
     containerContentType: string;
     tableContainerContentType: string;
+    sectionsContentType: string;
     skipEmptyTags?: boolean;
 }
 
@@ -112,6 +113,7 @@ export class TemplateCompiler {
         }
     }
 
+    // TODO:
     private detectContentType(tag: Tag, data: ScopeData): string {
         // explicit content type
         const scopeData = data.getScopeData();
@@ -121,11 +123,15 @@ export class TemplateCompiler {
             tag.disposition === TagDisposition.Open ||
             tag.disposition === TagDisposition.Close
         ) {
-            // implicit - loop
+            // implicit
             if (tag.rawText.startsWith(`{${this.delimiters.tableTagOpen}`)) {
                 return this.options.tableContainerContentType;
             }
-    
+
+            if (tag.rawText.startsWith(`{${this.delimiters.sectionTagOpen}`)) {
+                return this.options.sectionsContentType;
+            }
+
             return this.options.containerContentType;
         }
 

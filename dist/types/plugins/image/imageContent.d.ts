@@ -5,6 +5,7 @@ export declare type ImageFormat = MimeType.Jpeg | MimeType.Png | MimeType.Gif | 
 export interface ImageContent extends PluginContent {
     _type: 'image';
     source: Binary;
+    altText?: string;
     format: ImageFormat;
     width: number;
     height: number;

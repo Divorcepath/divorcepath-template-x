@@ -10,6 +10,7 @@ export interface TemplateCompilerOptions {
     defaultContentType: string;
     containerContentType: string;
     tableContainerContentType: string;
+    sectionsContentType: string;
     skipEmptyTags?: boolean;
 }
 export declare class TemplateCompiler {

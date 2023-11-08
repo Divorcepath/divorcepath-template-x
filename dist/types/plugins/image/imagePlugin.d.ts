@@ -4,6 +4,7 @@ export declare class ImagePlugin extends TemplatePlugin {
     readonly contentType = "image";
     simpleTagReplacements(tag: Tag, data: ScopeData, context: TemplateContext): Promise<void>;
     private createMarkup;
+    private docProperties;
     private pictureMarkup;
     private pixelsToEmu;
 }

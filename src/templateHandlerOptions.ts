@@ -1,7 +1,7 @@
 import { ScopeDataResolver } from './compilation';
 import { Delimiters } from './delimiters';
 import { ExtensionOptions } from './extensions';
-import { createDefaultPlugins, LOOP_CONTENT_TYPE, TABLE_LOOP_CONTENT_TYPE, TemplatePlugin, TEXT_CONTENT_TYPE } from './plugins';
+import { createDefaultPlugins, LOOP_CONTENT_TYPE, TABLE_LOOP_CONTENT_TYPE, SECTIONS_CONTENT_TYPE, TemplatePlugin, TEXT_CONTENT_TYPE } from './plugins';
 
 export class TemplateHandlerOptions {
 
@@ -21,6 +21,8 @@ export class TemplateHandlerOptions {
     public containerContentType?= LOOP_CONTENT_TYPE;
 
     public tableContainerContentType?= TABLE_LOOP_CONTENT_TYPE;
+
+    public sectionContentType?= SECTIONS_CONTENT_TYPE;
 
     public delimiters?: Partial<Delimiters> = new Delimiters();
 

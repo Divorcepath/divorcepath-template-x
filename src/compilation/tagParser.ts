@@ -150,6 +150,10 @@ export class TagParser {
             tag.disposition = TagDisposition.Open;
             tag.name = tagContent.slice(this.delimiters.tableTagOpen.length).trim();
 
+        }  else if (tagContent.startsWith(this.delimiters.sectionTagOpen)) {
+            tag.disposition = TagDisposition.Open;
+            tag.name = tagContent.slice(this.delimiters.sectionTagOpen.length).trim();
+
         } else if (tagContent.startsWith(this.delimiters.containerTagClose)) {
             tag.disposition = TagDisposition.Close;
             tag.name = tagContent.slice(this.delimiters.containerTagClose.length).trim();

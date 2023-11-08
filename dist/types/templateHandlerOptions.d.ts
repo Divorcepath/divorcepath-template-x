@@ -8,6 +8,7 @@ export declare class TemplateHandlerOptions {
     defaultContentType?: string;
     containerContentType?: string;
     tableContainerContentType?: string;
+    sectionContentType?: string;
     delimiters?: Partial<Delimiters>;
     maxXmlDepth?: number;
     extensions?: ExtensionOptions;

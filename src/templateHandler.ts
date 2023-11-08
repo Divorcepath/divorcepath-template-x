@@ -49,6 +49,7 @@ export class TemplateHandler {
                 defaultContentType: this.options.defaultContentType,
                 containerContentType: this.options.containerContentType,
                 tableContainerContentType: this.options.tableContainerContentType,
+                sectionsContentType: this.options.sectionContentType,
             }
         );
 

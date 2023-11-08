@@ -412,11 +412,11 @@ class XmlDepthTracker {
   }
 }
 
-let XmlNodeType;
-(function (XmlNodeType) {
+let XmlNodeType = /*#__PURE__*/function (XmlNodeType) {
   XmlNodeType["Text"] = "Text";
   XmlNodeType["General"] = "General";
-})(XmlNodeType || (XmlNodeType = {}));
+  return XmlNodeType;
+}({});
 const TEXT_NODE_NAME = '#text'; // see: https://developer.mozilla.org/en-US/docs/Web/API/Node/nodeName
 
 const XmlNode = {
@@ -783,7 +783,9 @@ const XmlNode = {
  *
  * * **Note:** Prefer calling with explicit index.
  */
-
+/**
+ * Remove a child node from it's parent. Returns the removed child.
+ */
 function removeChild(parent, childOrIndex) {
   if (!parent) throw new MissingArgumentError("parent");
   if (childOrIndex === null || childOrIndex === undefined) throw new MissingArgumentError("childOrIndex");
@@ -869,12 +871,6 @@ function recursiveRemoveEmptyTextNodes(node) {
 }
 
 class XmlParser {
-  /**
-   * We always use the DOMParser from 'xmldom', even in the browser since it
-   * handles xml namespaces more forgivingly (required mainly by the
-   * RawXmlPlugin).
-   */
-
   parse(str) {
     const doc = this.domParse(str);
     return XmlNode.fromDomNode(doc.documentElement);
@@ -888,6 +884,11 @@ class XmlParser {
   }
 }
 _defineProperty(XmlParser, "xmlHeader", '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>');
+/**
+ * We always use the DOMParser from 'xmldom', even in the browser since it
+ * handles xml namespaces more forgivingly (required mainly by the
+ * RawXmlPlugin).
+ */
 _defineProperty(XmlParser, "parser", new DOMParser());
 
 class MatchState {
@@ -1097,12 +1098,12 @@ class ScopeData {
   }
 }
 
-let TagDisposition;
-(function (TagDisposition) {
+let TagDisposition = /*#__PURE__*/function (TagDisposition) {
   TagDisposition["Open"] = "Open";
   TagDisposition["Close"] = "Close";
   TagDisposition["SelfClosed"] = "SelfClosed";
-})(TagDisposition || (TagDisposition = {}));
+  return TagDisposition;
+}({});
 
 class TagParser {
   constructor(docParser, delimiters) {
@@ -1223,6 +1224,9 @@ class TagParser {
     } else if (tagContent.startsWith(this.delimiters.tableTagOpen)) {
       tag.disposition = TagDisposition.Open;
       tag.name = tagContent.slice(this.delimiters.tableTagOpen.length).trim();
+    } else if (tagContent.startsWith(this.delimiters.sectionTagOpen)) {
+      tag.disposition = TagDisposition.Open;
+      tag.name = tagContent.slice(this.delimiters.sectionTagOpen.length).trim();
     } else if (tagContent.startsWith(this.delimiters.containerTagClose)) {
       tag.disposition = TagDisposition.Close;
       tag.name = tagContent.slice(this.delimiters.containerTagClose.length).trim();
@@ -1233,14 +1237,14 @@ class TagParser {
   }
 }
 
-let MimeType;
-(function (MimeType) {
+let MimeType = /*#__PURE__*/function (MimeType) {
   MimeType["Png"] = "image/png";
   MimeType["Jpeg"] = "image/jpeg";
   MimeType["Gif"] = "image/gif";
   MimeType["Bmp"] = "image/bmp";
   MimeType["Svg"] = "image/svg+xml";
-})(MimeType || (MimeType = {}));
+  return MimeType;
+}({});
 class MimeTypeHelper {
   static getDefaultExtension(mime) {
     switch (mime) {
@@ -1342,11 +1346,11 @@ class ImagePlugin extends TemplatePlugin {
 
     // create the xml markup
     const imageId = nextImageId++;
-    const imageXml = this.createMarkup(imageId, relId, content.width, content.height);
+    const imageXml = this.createMarkup(imageId, relId, content.altText, content.width, content.height);
     XmlNode.insertAfter(imageXml, wordTextNode);
     XmlNode.remove(wordTextNode);
   }
-  createMarkup(imageId, relId, width, height) {
+  createMarkup(imageId, relId, altText, width, height) {
     // http://officeopenxml.com/drwPicInline.php
 
     //
@@ -1365,13 +1369,13 @@ class ImagePlugin extends TemplatePlugin {
                 <wp:inline distT="0" distB="0" distL="0" distR="0">
                     <wp:extent cx="${this.pixelsToEmu(width)}" cy="${this.pixelsToEmu(height)}"/>
                     <wp:effectExtent l="0" t="0" r="0" b="0"/>
-                    <wp:docPr id="${imageId}" name="${name}"/>
+                    ${this.docProperties(imageId, name, altText)}
                     <wp:cNvGraphicFramePr>
                         <a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/>
                     </wp:cNvGraphicFramePr>
                     <a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
                         <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">
-                            ${this.pictureMarkup(name, relId, width, height)}
+                            ${this.pictureMarkup(imageId, relId, name, width, height)}
                         </a:graphicData>
                     </a:graphic>
                 </wp:inline>
@@ -1382,7 +1386,21 @@ class ImagePlugin extends TemplatePlugin {
 
     return markupXml;
   }
-  pictureMarkup(name, relId, width, height) {
+  docProperties(imageId, name, altText) {
+    if (altText) {
+      return `<wp:docPr id="${imageId}" name="${name}" descr="${altText}"/>`;
+    }
+    return `
+            <wp:docPr id="${imageId}" name="${name}">
+                <a:extLst xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+					<a:ext uri="{C183D7F6-B498-43B3-948B-1728B52AA6E4}">
+						<adec:decorative xmlns:adec="http://schemas.microsoft.com/office/drawing/2017/decorative" val="1"/>
+					</a:ext>
+				</a:extLst>
+            </wp:docPr>
+        `;
+  }
+  pictureMarkup(imageId, relId, name, width, height) {
     // http://officeopenxml.com/drwPic.php
 
     // legend:
@@ -1393,7 +1411,7 @@ class ImagePlugin extends TemplatePlugin {
     return `
             <pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">
                 <pic:nvPicPr>
-                    <pic:cNvPr id="0" name="${name}"/>
+                    <pic:cNvPr id="${imageId}" name="${name}"/>
                     <pic:cNvPicPr>
                         <a:picLocks noChangeAspect="1" noChangeArrowheads="1"/>
                     </pic:cNvPicPr>
@@ -1437,8 +1455,7 @@ class ImagePlugin extends TemplatePlugin {
   }
 }
 
-let ContentPartType;
-(function (ContentPartType) {
+let ContentPartType = /*#__PURE__*/function (ContentPartType) {
   ContentPartType["MainDocument"] = "MainDocument";
   ContentPartType["DefaultHeader"] = "DefaultHeader";
   ContentPartType["FirstHeader"] = "FirstHeader";
@@ -1446,7 +1463,8 @@ let ContentPartType;
   ContentPartType["DefaultFooter"] = "DefaultFooter";
   ContentPartType["FirstFooter"] = "FirstFooter";
   ContentPartType["EvenPagesFooter"] = "EvenPagesFooter";
-})(ContentPartType || (ContentPartType = {}));
+  return ContentPartType;
+}({});
 
 /**
  * http://officeopenxml.com/anatomyofOOXML.php
@@ -1812,7 +1830,6 @@ class Docx {
   //
   // static methods
   //
-
   static async open(zip, xmlParser) {
     const mainDocumentPath = await Docx.getMainDocumentPath(zip, xmlParser);
     if (!mainDocumentPath) throw new MalformedFileError('docx');
@@ -1955,31 +1972,9 @@ class Docx {
 _defineProperty(Docx, "mainDocumentRelType", 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument');
 
 class DocxParser {
-  /*
-   * Word markup intro:
-   *
-   * In Word text nodes are contained in "run" nodes (which specifies text
-   * properties such as font and color). The "run" nodes in turn are
-   * contained in paragraph nodes which is the core unit of content.
-   *
-   * Example:
-   *
-   * <w:p>    <-- paragraph
-   *   <w:r>      <-- run
-   *     <w:rPr>      <-- run properties
-   *       <w:b/>     <-- bold
-   *     </w:rPr>
-   *     <w:t>This is text.</w:t>     <-- actual text
-   *   </w:r>
-   * </w:p>
-   *
-   * see: http://officeopenxml.com/WPcontentOverview.php
-   */
-
   //
   // constructor
   //
-
   constructor(xmlParser) {
     this.xmlParser = xmlParser;
   }
@@ -2290,6 +2285,26 @@ class DocxParser {
     return true;
   }
 }
+/*
+ * Word markup intro:
+ *
+ * In Word text nodes are contained in "run" nodes (which specifies text
+ * properties such as font and color). The "run" nodes in turn are
+ * contained in paragraph nodes which is the core unit of content.
+ *
+ * Example:
+ *
+ * <w:p>    <-- paragraph
+ *   <w:r>      <-- run
+ *     <w:rPr>      <-- run properties
+ *       <w:b/>     <-- bold
+ *     </w:rPr>
+ *     <w:t>This is text.</w:t>     <-- actual text
+ *   </w:r>
+ * </w:p>
+ *
+ * see: http://officeopenxml.com/WPcontentOverview.php
+ */
 _defineProperty(DocxParser, "PARAGRAPH_NODE", 'w:p');
 _defineProperty(DocxParser, "PARAGRAPH_PROPERTIES_NODE", 'w:pPr');
 _defineProperty(DocxParser, "RUN_NODE", 'w:r');
@@ -2367,7 +2382,7 @@ class LinkPlugin extends TemplatePlugin {
 }
 _defineProperty(LinkPlugin, "linkRelType", 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink');
 
-class LoopListStrategy {
+class LoopListStrategy$1 {
   constructor() {
     _defineProperty(this, "utilities", void 0);
   }
@@ -2407,7 +2422,7 @@ class LoopListStrategy {
   }
 }
 
-class LoopParagraphStrategy {
+class LoopParagraphStrategy$1 {
   constructor() {
     _defineProperty(this, "utilities", void 0);
   }
@@ -2479,7 +2494,7 @@ class LoopPlugin extends TemplatePlugin {
   constructor(...args) {
     super(...args);
     _defineProperty(this, "contentType", LOOP_CONTENT_TYPE);
-    _defineProperty(this, "loopStrategies", [new LoopListStrategy(), new LoopParagraphStrategy() // the default strategy
+    _defineProperty(this, "loopStrategies", [new LoopListStrategy$1(), new LoopParagraphStrategy$1() // the default strategy
     ]);
   }
 
@@ -2737,6 +2752,241 @@ class TableLoopPlugin extends TemplatePlugin {
   }
 }
 
+class LoopListStrategy {
+  constructor() {
+    _defineProperty(this, "utilities", void 0);
+  }
+  setUtilities(utilities) {
+    this.utilities = utilities;
+  }
+  isApplicable(openTag, closeTag) {
+    const containingParagraph = this.utilities.docxParser.containingParagraphNode(openTag.xmlTextNode);
+    return this.utilities.docxParser.isListParagraph(containingParagraph);
+  }
+  splitBefore(openTag, closeTag) {
+    const firstParagraph = this.utilities.docxParser.containingParagraphNode(openTag.xmlTextNode);
+    const lastParagraph = this.utilities.docxParser.containingParagraphNode(closeTag.xmlTextNode);
+    const paragraphsToRepeat = XmlNode.siblingsInRange(firstParagraph, lastParagraph);
+
+    // remove the loop tags
+    XmlNode.remove(openTag.xmlTextNode);
+    XmlNode.remove(closeTag.xmlTextNode);
+    return {
+      firstNode: firstParagraph,
+      nodesToRepeat: paragraphsToRepeat,
+      lastNode: lastParagraph
+    };
+  }
+  mergeBack(paragraphGroups, firstParagraph, lastParagraphs) {
+    for (const curParagraphsGroup of paragraphGroups) {
+      for (const paragraph of curParagraphsGroup) {
+        XmlNode.insertBefore(paragraph, lastParagraphs);
+      }
+    }
+
+    // remove the old paragraphs
+    XmlNode.remove(firstParagraph);
+    if (firstParagraph !== lastParagraphs) {
+      XmlNode.remove(lastParagraphs);
+    }
+  }
+}
+
+class LoopParagraphStrategy {
+  constructor() {
+    _defineProperty(this, "utilities", void 0);
+  }
+  setUtilities(utilities) {
+    this.utilities = utilities;
+  }
+  isApplicable(openTag, closeTag) {
+    return true;
+  }
+  splitBefore(openTag, closeTag) {
+    // gather some info
+    let firstParagraph = this.utilities.docxParser.containingParagraphNode(openTag.xmlTextNode);
+    let lastParagraph = this.utilities.docxParser.containingParagraphNode(closeTag.xmlTextNode);
+    const areSame = firstParagraph === lastParagraph;
+
+    // split first paragraph
+    let splitResult = this.utilities.docxParser.splitParagraphByTextNode(firstParagraph, openTag.xmlTextNode, true);
+    firstParagraph = splitResult[0];
+    let afterFirstParagraph = splitResult[1];
+    if (areSame) lastParagraph = afterFirstParagraph;
+
+    // split last paragraph
+    splitResult = this.utilities.docxParser.splitParagraphByTextNode(lastParagraph, closeTag.xmlTextNode, true);
+    const beforeLastParagraph = splitResult[0];
+    lastParagraph = splitResult[1];
+    if (areSame) afterFirstParagraph = beforeLastParagraph;
+
+    // disconnect splitted paragraph from their parents
+    XmlNode.remove(afterFirstParagraph);
+    if (!areSame) XmlNode.remove(beforeLastParagraph);
+
+    // extract all paragraphs in between
+    let middleParagraphs;
+    if (areSame) {
+      middleParagraphs = [afterFirstParagraph];
+    } else {
+      const inBetween = XmlNode.removeSiblings(firstParagraph, lastParagraph);
+      middleParagraphs = [afterFirstParagraph].concat(inBetween).concat(beforeLastParagraph);
+    }
+    return {
+      firstNode: firstParagraph,
+      nodesToRepeat: middleParagraphs,
+      lastNode: lastParagraph
+    };
+  }
+  mergeBack(middleParagraphs, firstParagraph, lastParagraph, bookmarkSection) {
+    let mergeTo = firstParagraph;
+    const body = XmlNode.findParentByName(mergeTo, "w:body");
+    const bookmarksAmount = body.childNodes.reduce((acc, node) => {
+      return acc + Number(node.nodeName === "w:bookmarkStart");
+    }, 0);
+    const bookmarkStart = XmlNode.createGeneralNode("w:bookmarkStart");
+    bookmarkStart.attributes = {};
+    const bookmarkId = `${bookmarksAmount}`;
+    bookmarkStart.attributes["w:id"] = bookmarkId;
+    bookmarkStart.attributes["w:name"] = bookmarkSection !== null && bookmarkSection !== void 0 ? bookmarkSection : `sectionId_${bookmarkId}`;
+    const bookmarkEnd = XmlNode.createGeneralNode("w:bookmarkEnd");
+    bookmarkEnd.attributes = {};
+    bookmarkEnd.attributes["w:id"] = bookmarkId;
+    XmlNode.insertBefore(bookmarkStart, mergeTo);
+    for (const curParagraphsGroup of middleParagraphs) {
+      // merge first paragraphs
+      this.utilities.docxParser.joinParagraphs(mergeTo, curParagraphsGroup[0]);
+
+      // add middle and last paragraphs to the original document
+      for (let i = 1; i < curParagraphsGroup.length; i++) {
+        XmlNode.insertBefore(curParagraphsGroup[i], lastParagraph);
+        mergeTo = curParagraphsGroup[i];
+      }
+    }
+
+    // merge last paragraph
+    this.utilities.docxParser.joinParagraphs(mergeTo, lastParagraph);
+
+    // remove the old last paragraph (was merged into the new one)
+    XmlNode.remove(lastParagraph);
+    XmlNode.insertAfter(bookmarkEnd, mergeTo);
+  }
+}
+
+const SECTIONS_CONTENT_TYPE = 'sections';
+class SectionsPlugin extends TemplatePlugin {
+  constructor(...args) {
+    super(...args);
+    _defineProperty(this, "contentType", SECTIONS_CONTENT_TYPE);
+    _defineProperty(this, "loopStrategies", [new LoopListStrategy(), new LoopParagraphStrategy() // the default strategy
+    ]);
+  }
+
+  setUtilities(utilities) {
+    this.utilities = utilities;
+    this.loopStrategies.forEach(strategy => strategy.setUtilities(utilities));
+  }
+  async containerTagReplacements(tags, data, context) {
+    const value = data.getScopeData();
+    const section = value === null || value === void 0 ? void 0 : value.section;
+
+    // Non array value - treat as a boolean condition.
+    // const isCondition = !Array.isArray(value);
+    // if (isCondition) {
+    //     if (!!value) {
+    //         value = [{}];
+    //     } else {
+    //         value = [];
+    //     }
+    // }
+
+    // vars
+    const openTag = tags[0];
+    const closeTag = last(tags);
+
+    // select the suitable strategy
+    const loopStrategy = this.loopStrategies.find(strategy => strategy.isApplicable(openTag, closeTag));
+    if (!loopStrategy) throw new Error(`No loop strategy found for tag '${openTag.rawText}'.`);
+
+    // prepare to loop
+    const {
+      firstNode,
+      nodesToRepeat,
+      lastNode
+    } = loopStrategy.splitBefore(openTag, closeTag);
+
+    // repeat (loop) the content
+    // const repeatedNodes = this.repeat(nodesToRepeat, value.length);
+    const repeatedNodes = this.repeat(nodesToRepeat, 1);
+
+    // recursive compilation
+    // (this step can be optimized in the future if we'll keep track of the
+    // path to each token and use that to create new tokens instead of
+    // search through the text again)
+    const compiledNodes = await this.compile(true, repeatedNodes, data, context);
+
+    // merge back to the document
+    loopStrategy.mergeBack(compiledNodes, firstNode, lastNode, section);
+  }
+  repeat(nodes, times) {
+    if (!nodes.length || !times) return [];
+    const allResults = [];
+    for (let i = 0; i < times; i++) {
+      const curResult = nodes.map(node => XmlNode.cloneNode(node, true));
+      allResults.push(curResult);
+    }
+    return allResults;
+  }
+  async compile(isCondition, nodeGroups, data, context) {
+    const compiledNodeGroups = [];
+
+    // compile each node group with it's relevant data
+    for (let i = 0; i < nodeGroups.length; i++) {
+      // create dummy root node
+      const curNodes = nodeGroups[i];
+      const dummyRootNode = XmlNode.createGeneralNode('dummyRootNode');
+      curNodes.forEach(node => XmlNode.appendChild(dummyRootNode, node));
+
+      // compile the new root
+      const conditionTag = this.updatePathBefore(isCondition, data, i);
+      await this.utilities.compiler.compile(dummyRootNode, data, context);
+      this.updatePathAfter(isCondition, data, conditionTag);
+
+      // disconnect from dummy root
+      const curResult = [];
+      while (dummyRootNode.childNodes && dummyRootNode.childNodes.length) {
+        const child = XmlNode.removeChild(dummyRootNode, 0);
+        curResult.push(child);
+      }
+      compiledNodeGroups.push(curResult);
+    }
+    return compiledNodeGroups;
+  }
+  updatePathBefore(isCondition, data, groupIndex) {
+    // if it's a condition - don't go deeper in the path
+    // (so we need to extract the already pushed condition tag)
+    if (isCondition) {
+      if (groupIndex > 0) {
+        // should never happen - conditions should have at most one (synthetic) child...
+        throw new Error(`Internal error: Unexpected group index ${groupIndex} for boolean condition at path "${data.pathString()}".`);
+      }
+      return data.pathPop();
+    }
+
+    // else, it's an array - push the current index
+    data.pathPush(groupIndex);
+    return null;
+  }
+  updatePathAfter(isCondition, data, conditionTag) {
+    // reverse the "before" path operation
+    if (isCondition) {
+      data.pathPush(conditionTag);
+    } else {
+      data.pathPop();
+    }
+  }
+}
+
 class RawXmlPlugin extends TemplatePlugin {
   constructor(...args) {
     super(...args);
@@ -2809,7 +3059,7 @@ class TextPlugin extends TemplatePlugin {
 }
 
 function createDefaultPlugins() {
-  return [new LoopPlugin(), new TableLoopPlugin(), new RawXmlPlugin(), new ImagePlugin(), new LinkPlugin(), new TextPlugin()];
+  return [new LoopPlugin(), new TableLoopPlugin(), new SectionsPlugin(), new RawXmlPlugin(), new ImagePlugin(), new LinkPlugin(), new TextPlugin()];
 }
 
 const PluginContent = {
@@ -2882,14 +3132,19 @@ class TemplateCompiler {
       data.pathPop();
     }
   }
+
+  // TODO:
   detectContentType(tag, data) {
     // explicit content type
     const scopeData = data.getScopeData();
     if (PluginContent.isPluginContent(scopeData)) return scopeData._type;
     if (tag.disposition === TagDisposition.Open || tag.disposition === TagDisposition.Close) {
-      // implicit - loop
+      // implicit
       if (tag.rawText.startsWith(`{${this.delimiters.tableTagOpen}`)) {
         return this.options.tableContainerContentType;
+      }
+      if (tag.rawText.startsWith(`{${this.delimiters.sectionTagOpen}`)) {
+        return this.options.sectionsContentType;
       }
       return this.options.containerContentType;
     }
@@ -3031,13 +3286,14 @@ class Delimiters {
     _defineProperty(this, "tagEnd", "}");
     _defineProperty(this, "containerTagOpen", "#");
     _defineProperty(this, "tableTagOpen", "%");
+    _defineProperty(this, "sectionTagOpen", "^");
     _defineProperty(this, "containerTagClose", "/");
     Object.assign(this, initial);
     this.encodeAndValidate();
     if (this.containerTagOpen === this.containerTagClose) throw new Error(`${"containerTagOpen"} can not be equal to ${"containerTagClose"}`);
   }
   encodeAndValidate() {
-    const keys = ['tagStart', 'tagEnd', 'containerTagOpen', 'containerTagClose', 'tableTagOpen'];
+    const keys = ['tagStart', 'tagEnd', 'containerTagOpen', 'containerTagClose', 'tableTagOpen', 'sectionTagOpen'];
     for (const key of keys) {
       const value = this[key];
       if (!value) throw new Error(`${key} can not be empty.`);
@@ -3047,20 +3303,20 @@ class Delimiters {
 }
 
 class TemplateHandlerOptions {
-  /**
-   * Determines the behavior in case of an empty input data. If set to true
-   * the tag will be left untouched, if set to false the tag will be replaced
-   * by an empty string.
-   *
-   * Default: false
-   */
-
   constructor(initial) {
     _defineProperty(this, "plugins", createDefaultPlugins());
+    /**
+     * Determines the behavior in case of an empty input data. If set to true
+     * the tag will be left untouched, if set to false the tag will be replaced
+     * by an empty string.
+     *
+     * Default: false
+     */
     _defineProperty(this, "skipEmptyTags", false);
     _defineProperty(this, "defaultContentType", TEXT_CONTENT_TYPE);
     _defineProperty(this, "containerContentType", LOOP_CONTENT_TYPE);
     _defineProperty(this, "tableContainerContentType", TABLE_LOOP_CONTENT_TYPE);
+    _defineProperty(this, "sectionContentType", SECTIONS_CONTENT_TYPE);
     _defineProperty(this, "delimiters", new Delimiters());
     _defineProperty(this, "maxXmlDepth", 20);
     _defineProperty(this, "extensions", {});
@@ -3076,13 +3332,12 @@ class TemplateHandlerOptions {
 }
 
 class TemplateHandler {
-  /**
-   * Version number of the `easy-template-x` library.
-   */
-
   constructor(options) {
     var _this$options$extensi, _this$options$extensi2, _this$options$extensi3, _this$options$extensi4;
-    _defineProperty(this, "version", "3.0.4" );
+    /**
+     * Version number of the `easy-template-x` library.
+     */
+    _defineProperty(this, "version", "3.1.0" );
     _defineProperty(this, "xmlParser", new XmlParser());
     _defineProperty(this, "docxParser", void 0);
     _defineProperty(this, "compiler", void 0);
@@ -3103,7 +3358,8 @@ class TemplateHandler {
       skipEmptyTags: this.options.skipEmptyTags,
       defaultContentType: this.options.defaultContentType,
       containerContentType: this.options.containerContentType,
-      tableContainerContentType: this.options.tableContainerContentType
+      tableContainerContentType: this.options.tableContainerContentType,
+      sectionsContentType: this.options.sectionContentType
     });
     this.options.plugins.forEach(plugin => {
       plugin.setUtilities({
@@ -3231,4 +3487,4 @@ class TemplateHandler {
   }
 }
 
-export { Base64, Binary, ContentPartType, DelimiterSearcher, Delimiters, Docx, DocxParser, ImagePlugin, LOOP_CONTENT_TYPE, LinkPlugin, LoopPlugin, MalformedFileError, MaxXmlDepthError, MimeType, MimeTypeHelper, MissingArgumentError, MissingCloseDelimiterError, MissingStartDelimiterError, Path, PluginContent, RawXmlPlugin, Regex, ScopeData, TABLE_LOOP_CONTENT_TYPE, TEXT_CONTENT_TYPE, TEXT_NODE_NAME, TableLoopPlugin, TagDisposition, TagParser, TemplateCompiler, TemplateExtension, TemplateHandler, TemplateHandlerOptions, TemplatePlugin, TextPlugin, UnclosedTagError, UnidentifiedFileTypeError, UnknownContentTypeError, UnopenedTagError, UnsupportedFileTypeError, XmlDepthTracker, XmlNode, XmlNodeType, XmlParser, XmlPart, Zip, ZipObject, createDefaultPlugins, first, inheritsFrom, isNumber, isPromiseLike, last, pushMany, sha1, stringValue, toDictionary };
+export { Base64, Binary, ContentPartType, DelimiterSearcher, Delimiters, Docx, DocxParser, ImagePlugin, LOOP_CONTENT_TYPE, LinkPlugin, LoopPlugin, MalformedFileError, MaxXmlDepthError, MimeType, MimeTypeHelper, MissingArgumentError, MissingCloseDelimiterError, MissingStartDelimiterError, Path, PluginContent, RawXmlPlugin, Regex, SECTIONS_CONTENT_TYPE, ScopeData, SectionsPlugin, TABLE_LOOP_CONTENT_TYPE, TEXT_CONTENT_TYPE, TEXT_NODE_NAME, TableLoopPlugin, TagDisposition, TagParser, TemplateCompiler, TemplateExtension, TemplateHandler, TemplateHandlerOptions, TemplatePlugin, TextPlugin, UnclosedTagError, UnidentifiedFileTypeError, UnknownContentTypeError, UnopenedTagError, UnsupportedFileTypeError, XmlDepthTracker, XmlNode, XmlNodeType, XmlParser, XmlPart, Zip, ZipObject, createDefaultPlugins, first, inheritsFrom, isNumber, isPromiseLike, last, pushMany, sha1, stringValue, toDictionary };
