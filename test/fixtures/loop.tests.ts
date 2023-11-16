@@ -1,5 +1,7 @@
 import { TemplateHandler } from "src/templateHandler";
 import { readFixture } from "./fixtureUtils";
+import { ScopeDataArgs, XmlNode } from "src";
+import { writeTempFile } from "test/testUtils";
 
 describe("loop fixtures", () => {
     it("replaces paragraph loops correctly", async () => {
@@ -54,7 +56,18 @@ describe("loop fixtures", () => {
     // });
 
     it("inserts bookmarks", async () => {
-        const handler = new TemplateHandler();
+        let id = 0;
+        const handler = new TemplateHandler({
+            scopeDataResolver: (args: ScopeDataArgs): any => {
+                return {
+                    _type: "sections",
+                    section: {
+                        name: `sectionId${id}`,
+                        id: `${id++}`,
+                    },
+                };
+            },
+        });
 
         const template = readFixture("sections.docx");
 
@@ -62,9 +75,11 @@ describe("loop fixtures", () => {
 
         const doc = await handler.process(template, data);
 
-        // const docXml = await handler.getXml(doc);
+        const docXml = await handler.getXml(doc);
 
-        // writeTempFile('sections - test.docx', doc);
+        console.log(XmlNode.serialize(docXml));
+
+        writeTempFile("sections - test.docx", doc);
     });
 
     it("replaces list loops correctly", async () => {

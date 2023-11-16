@@ -1,5 +1,5 @@
-import { ScopeData, Tag, TemplateContext } from '../../compilation';
-import { PluginUtilities, TemplatePlugin } from '../templatePlugin';
+import { ScopeData, Tag, TemplateContext } from "../../compilation";
+import { PluginUtilities, TemplatePlugin } from "../templatePlugin";
 export declare const SECTIONS_CONTENT_TYPE = "sections";
 export declare class SectionsPlugin extends TemplatePlugin {
     readonly contentType = "sections";

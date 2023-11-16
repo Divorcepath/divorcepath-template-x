@@ -1,7 +1,7 @@
 import { Tag } from "../../../compilation";
 import { XmlNode } from "../../../xml";
 import { PluginUtilities } from "../../templatePlugin";
-import { ILoopStrategy, SplitBeforeResult } from "./iLoopStrategy";
+import { ILoopStrategy, Section, SplitBeforeResult } from "./iLoopStrategy";
 
 export class LoopParagraphStrategy implements ILoopStrategy {
     private utilities: PluginUtilities;
@@ -57,9 +57,14 @@ export class LoopParagraphStrategy implements ILoopStrategy {
                 firstParagraph,
                 lastParagraph
             );
-            middleParagraphs = [afterFirstParagraph]
-                .concat(inBetween)
-                .concat(beforeLastParagraph);
+            middleParagraphs = [afterFirstParagraph].concat(inBetween);
+
+            if (
+                beforeLastParagraph.nodeName !== "w:p" ||
+                beforeLastParagraph.childNodes.length > 0
+            ) {
+                middleParagraphs.push(beforeLastParagraph);
+            }
         }
 
         return {
@@ -73,22 +78,16 @@ export class LoopParagraphStrategy implements ILoopStrategy {
         middleParagraphs: XmlNode[][],
         firstParagraph: XmlNode,
         lastParagraph: XmlNode,
-        bookmarkSection?: string,
+        section: Section
     ): void {
+        const { name, id: bookmarkId } = section;
         let mergeTo = firstParagraph;
-        const body = XmlNode.findParentByName(mergeTo, "w:body");
-
-        const bookmarksAmount = body.childNodes.reduce((acc, node) => {
-            return acc + Number(node.nodeName === "w:bookmarkStart");
-        }, 0);
 
         const bookmarkStart = XmlNode.createGeneralNode("w:bookmarkStart");
         bookmarkStart.attributes = {};
 
-        const bookmarkId = `${bookmarksAmount}`;
-
         bookmarkStart.attributes["w:id"] = bookmarkId;
-        bookmarkStart.attributes["w:name"] = bookmarkSection ?? `sectionId_${bookmarkId}`;
+        bookmarkStart.attributes["w:name"] = name ?? `sectionId_${bookmarkId}`;
 
         const bookmarkEnd = XmlNode.createGeneralNode("w:bookmarkEnd");
         bookmarkEnd.attributes = {};
@@ -111,11 +110,19 @@ export class LoopParagraphStrategy implements ILoopStrategy {
         }
 
         // merge last paragraph
-        this.utilities.docxParser.joinParagraphs(mergeTo, lastParagraph);
+        // this.utilities.docxParser.joinParagraphs(mergeTo, lastParagraph);
 
         // remove the old last paragraph (was merged into the new one)
-        XmlNode.remove(lastParagraph);
 
         XmlNode.insertAfter(bookmarkEnd, mergeTo);
+
+        if (
+            firstParagraph.nodeName === "w:p" &&
+            firstParagraph.childNodes.length === 0
+        ) {
+            XmlNode.remove(firstParagraph);
+        }
+
+        XmlNode.remove(lastParagraph);
     }
 }

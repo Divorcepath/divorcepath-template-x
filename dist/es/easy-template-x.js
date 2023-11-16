@@ -2830,7 +2830,10 @@ class LoopParagraphStrategy {
       middleParagraphs = [afterFirstParagraph];
     } else {
       const inBetween = XmlNode.removeSiblings(firstParagraph, lastParagraph);
-      middleParagraphs = [afterFirstParagraph].concat(inBetween).concat(beforeLastParagraph);
+      middleParagraphs = [afterFirstParagraph].concat(inBetween);
+      if (beforeLastParagraph.nodeName !== "w:p" || beforeLastParagraph.childNodes.length > 0) {
+        middleParagraphs.push(beforeLastParagraph);
+      }
     }
     return {
       firstNode: firstParagraph,
@@ -2838,17 +2841,16 @@ class LoopParagraphStrategy {
       lastNode: lastParagraph
     };
   }
-  mergeBack(middleParagraphs, firstParagraph, lastParagraph, bookmarkSection) {
+  mergeBack(middleParagraphs, firstParagraph, lastParagraph, section) {
+    const {
+      name,
+      id: bookmarkId
+    } = section;
     let mergeTo = firstParagraph;
-    const body = XmlNode.findParentByName(mergeTo, "w:body");
-    const bookmarksAmount = body.childNodes.reduce((acc, node) => {
-      return acc + Number(node.nodeName === "w:bookmarkStart");
-    }, 0);
     const bookmarkStart = XmlNode.createGeneralNode("w:bookmarkStart");
     bookmarkStart.attributes = {};
-    const bookmarkId = `${bookmarksAmount}`;
     bookmarkStart.attributes["w:id"] = bookmarkId;
-    bookmarkStart.attributes["w:name"] = bookmarkSection !== null && bookmarkSection !== void 0 ? bookmarkSection : `sectionId_${bookmarkId}`;
+    bookmarkStart.attributes["w:name"] = name !== null && name !== void 0 ? name : `sectionId_${bookmarkId}`;
     const bookmarkEnd = XmlNode.createGeneralNode("w:bookmarkEnd");
     bookmarkEnd.attributes = {};
     bookmarkEnd.attributes["w:id"] = bookmarkId;
@@ -2865,15 +2867,19 @@ class LoopParagraphStrategy {
     }
 
     // merge last paragraph
-    this.utilities.docxParser.joinParagraphs(mergeTo, lastParagraph);
+    // this.utilities.docxParser.joinParagraphs(mergeTo, lastParagraph);
 
     // remove the old last paragraph (was merged into the new one)
-    XmlNode.remove(lastParagraph);
+
     XmlNode.insertAfter(bookmarkEnd, mergeTo);
+    if (firstParagraph.nodeName === "w:p" && firstParagraph.childNodes.length === 0) {
+      XmlNode.remove(firstParagraph);
+    }
+    XmlNode.remove(lastParagraph);
   }
 }
 
-const SECTIONS_CONTENT_TYPE = 'sections';
+const SECTIONS_CONTENT_TYPE = "sections";
 class SectionsPlugin extends TemplatePlugin {
   constructor(...args) {
     super(...args);
@@ -2944,7 +2950,7 @@ class SectionsPlugin extends TemplatePlugin {
     for (let i = 0; i < nodeGroups.length; i++) {
       // create dummy root node
       const curNodes = nodeGroups[i];
-      const dummyRootNode = XmlNode.createGeneralNode('dummyRootNode');
+      const dummyRootNode = XmlNode.createGeneralNode("dummyRootNode");
       curNodes.forEach(node => XmlNode.appendChild(dummyRootNode, node));
 
       // compile the new root

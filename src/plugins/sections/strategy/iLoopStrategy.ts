@@ -2,6 +2,11 @@ import { Tag } from '../../../compilation';
 import { XmlNode } from '../../../xml';
 import { PluginUtilities } from '../../templatePlugin';
 
+export interface Section {
+    id: string;
+    name: string;
+}
+
 export interface ILoopStrategy {
 
     setUtilities(utilities: PluginUtilities): void;
@@ -10,7 +15,7 @@ export interface ILoopStrategy {
 
     splitBefore(openTag: Tag, closeTag: Tag): SplitBeforeResult;
 
-    mergeBack(compiledNodes: XmlNode[][], firstNode: XmlNode, lastNode: XmlNode, bookmarkSection: string): void;
+    mergeBack(compiledNodes: XmlNode[][], firstNode: XmlNode, lastNode: XmlNode, section: Section): void;
 }
 
 export interface SplitBeforeResult {
