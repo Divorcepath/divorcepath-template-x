@@ -2929,7 +2929,7 @@ class SectionsPlugin extends TemplatePlugin {
     // (this step can be optimized in the future if we'll keep track of the
     // path to each token and use that to create new tokens instead of
     // search through the text again)
-    const compiledNodes = await this.compile(true, repeatedNodes, data, context);
+    const compiledNodes = await this.compile(false, repeatedNodes, data, context);
 
     // merge back to the document
     loopStrategy.mergeBack(compiledNodes, firstNode, lastNode, section);

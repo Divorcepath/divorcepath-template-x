@@ -74,7 +74,7 @@ export class SectionsPlugin extends TemplatePlugin {
         // path to each token and use that to create new tokens instead of
         // search through the text again)
         const compiledNodes = await this.compile(
-            true,
+            false,
             repeatedNodes,
             data,
             context
