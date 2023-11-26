@@ -51,13 +51,14 @@ export class SectionsPlugin extends TemplatePlugin {
         const closeTag = last(tags);
 
         // select the suitable strategy
-        const loopStrategy = this.loopStrategies.find((strategy) =>
-            strategy.isApplicable(openTag, closeTag)
-        );
-        if (!loopStrategy)
-            throw new Error(
-                `No loop strategy found for tag '${openTag.rawText}'.`
-            );
+        // const loopStrategy = this.loopStrategies.find((strategy) =>
+        //     strategy.isApplicable(openTag, closeTag)
+        // );
+        // if (!loopStrategy)
+        //     throw new Error(
+        //         `No loop strategy found for tag '${openTag.rawText}'.`
+        //     );
+        const loopStrategy = this.loopStrategies[1];
 
         // prepare to loop
         const { firstNode, nodesToRepeat, lastNode } = loopStrategy.splitBefore(
