@@ -68,7 +68,7 @@ export class SectionsPlugin extends TemplatePlugin {
 
         // repeat (loop) the content
         // const repeatedNodes = this.repeat(nodesToRepeat, value.length);
-        const repeatedNodes = this.repeat(nodesToRepeat, 1);
+        const repeatedNodes = this.repeat(nodesToRepeat, +(section.include ?? 1));
 
         // recursive compilation
         // (this step can be optimized in the future if we'll keep track of the

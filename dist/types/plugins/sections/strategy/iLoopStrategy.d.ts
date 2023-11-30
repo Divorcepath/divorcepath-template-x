@@ -4,6 +4,7 @@ import { PluginUtilities } from '../../templatePlugin';
 export interface Section {
     id: string;
     name: string;
+    include: boolean;
 }
 export interface ILoopStrategy {
     setUtilities(utilities: PluginUtilities): void;

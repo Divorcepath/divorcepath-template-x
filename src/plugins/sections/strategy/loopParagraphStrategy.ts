@@ -80,7 +80,7 @@ export class LoopParagraphStrategy implements ILoopStrategy {
         lastParagraph: XmlNode,
         section: Section
     ): void {
-        const { name, id: bookmarkId } = section;
+        const { name, id: bookmarkId, include } = section;
         let mergeTo = firstParagraph;
 
         const bookmarkStart = XmlNode.createGeneralNode("w:bookmarkStart");
@@ -117,8 +117,9 @@ export class LoopParagraphStrategy implements ILoopStrategy {
         XmlNode.insertAfter(bookmarkEnd, mergeTo);
 
         if (
-            firstParagraph.nodeName === "w:p" &&
-            firstParagraph.childNodes.length === 0
+            (firstParagraph.nodeName === "w:p" &&
+                firstParagraph.childNodes.length === 0) ||
+            include === false
         ) {
             XmlNode.remove(firstParagraph);
         }
