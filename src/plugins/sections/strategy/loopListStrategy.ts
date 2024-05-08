@@ -1,10 +1,9 @@
-import { Tag } from '../../../compilation';
-import { XmlNode } from '../../../xml';
-import { PluginUtilities } from '../../templatePlugin';
-import { ILoopStrategy, SplitBeforeResult } from './iLoopStrategy';
+import type { Tag } from "../../../compilation";
+import { XmlNode } from "../../../xml";
+import type { PluginUtilities } from "../../templatePlugin";
+import type { ILoopStrategy, SplitBeforeResult } from "./iLoopStrategy";
 
 export class LoopListStrategy implements ILoopStrategy {
-
     private utilities: PluginUtilities;
 
     public setUtilities(utilities: PluginUtilities): void {
@@ -12,15 +11,25 @@ export class LoopListStrategy implements ILoopStrategy {
     }
 
     public isApplicable(openTag: Tag, closeTag: Tag): boolean {
-        const containingParagraph = this.utilities.docxParser.containingParagraphNode(openTag.xmlTextNode);
+        const containingParagraph =
+            this.utilities.docxParser.containingParagraphNode(
+                openTag.xmlTextNode
+            );
         return this.utilities.docxParser.isListParagraph(containingParagraph);
     }
 
     public splitBefore(openTag: Tag, closeTag: Tag): SplitBeforeResult {
-
-        const firstParagraph = this.utilities.docxParser.containingParagraphNode(openTag.xmlTextNode);
-        const lastParagraph = this.utilities.docxParser.containingParagraphNode(closeTag.xmlTextNode);
-        const paragraphsToRepeat = XmlNode.siblingsInRange(firstParagraph, lastParagraph);
+        const firstParagraph =
+            this.utilities.docxParser.containingParagraphNode(
+                openTag.xmlTextNode
+            );
+        const lastParagraph = this.utilities.docxParser.containingParagraphNode(
+            closeTag.xmlTextNode
+        );
+        const paragraphsToRepeat = XmlNode.siblingsInRange(
+            firstParagraph,
+            lastParagraph
+        );
 
         // remove the loop tags
         XmlNode.remove(openTag.xmlTextNode);
@@ -29,12 +38,15 @@ export class LoopListStrategy implements ILoopStrategy {
         return {
             firstNode: firstParagraph,
             nodesToRepeat: paragraphsToRepeat,
-            lastNode: lastParagraph
+            lastNode: lastParagraph,
         };
     }
 
-    public mergeBack(paragraphGroups: XmlNode[][], firstParagraph: XmlNode, lastParagraphs: XmlNode): void {
-
+    public mergeBack(
+        paragraphGroups: XmlNode[][],
+        firstParagraph: XmlNode,
+        lastParagraphs: XmlNode
+    ): void {
         for (const curParagraphsGroup of paragraphGroups) {
             for (const paragraph of curParagraphsGroup) {
                 XmlNode.insertBefore(paragraph, lastParagraphs);

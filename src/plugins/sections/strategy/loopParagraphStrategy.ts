@@ -1,7 +1,11 @@
-import { Tag } from "../../../compilation";
+import type { Tag } from "../../../compilation";
 import { XmlNode } from "../../../xml";
-import { PluginUtilities } from "../../templatePlugin";
-import { ILoopStrategy, Section, SplitBeforeResult } from "./iLoopStrategy";
+import type { PluginUtilities } from "../../templatePlugin";
+import type {
+    ILoopStrategy,
+    Section,
+    SplitBeforeResult,
+} from "./iLoopStrategy";
 
 export class LoopParagraphStrategy implements ILoopStrategy {
     private utilities: PluginUtilities;
@@ -80,7 +84,7 @@ export class LoopParagraphStrategy implements ILoopStrategy {
         lastParagraph: XmlNode,
         section: Section
     ): void {
-        const { name, id: bookmarkId, include } = section;
+        const { name, id: bookmarkId, include, mode } = section;
         let mergeTo = firstParagraph;
 
         const bookmarkStart = XmlNode.createGeneralNode("w:bookmarkStart");
@@ -119,7 +123,7 @@ export class LoopParagraphStrategy implements ILoopStrategy {
         if (
             (firstParagraph.nodeName === "w:p" &&
                 firstParagraph.childNodes.length === 0) ||
-            include === false
+            (include === false && mode === "ejectable")
         ) {
             XmlNode.remove(firstParagraph);
         }

@@ -1,11 +1,16 @@
-import { PathPart, ScopeData, Tag, TemplateContext } from "../../compilation";
+import type {
+    PathPart,
+    ScopeData,
+    Tag,
+    TemplateContext,
+} from "../../compilation";
 // import { TemplateData } from '../../templateData';
 import { last } from "../../utils";
 import { XmlNode } from "../../xml";
-import { PluginUtilities, TemplatePlugin } from "../templatePlugin";
-import { SectionContent } from "./sectionContent";
+import { type PluginUtilities, TemplatePlugin } from "../templatePlugin";
+import type { SectionContent } from "./sectionContent";
 import {
-    ILoopStrategy,
+    type ILoopStrategy,
     LoopListStrategy,
     LoopParagraphStrategy,
 } from "./strategy";
@@ -34,7 +39,9 @@ export class SectionsPlugin extends TemplatePlugin {
     ): Promise<void> {
         const value = data.getScopeData<SectionContent>();
 
-        const section = value?.section;
+        const { section } = value;
+
+        const { mode, include } = section;
 
         // Non array value - treat as a boolean condition.
         // const isCondition = !Array.isArray(value);
@@ -68,7 +75,15 @@ export class SectionsPlugin extends TemplatePlugin {
 
         // repeat (loop) the content
         // const repeatedNodes = this.repeat(nodesToRepeat, value.length);
-        const repeatedNodes = this.repeat(nodesToRepeat, +(section.include ?? 1));
+        // In case of not precedents section it should be repeated, not ejected from the document
+
+        const getRepeadedNodes = () => {
+            if (mode === "hidable") return 1;
+
+            return +(include ?? 1);
+        };
+
+        const repeatedNodes = this.repeat(nodesToRepeat, getRepeadedNodes());
 
         // recursive compilation
         // (this step can be optimized in the future if we'll keep track of the
