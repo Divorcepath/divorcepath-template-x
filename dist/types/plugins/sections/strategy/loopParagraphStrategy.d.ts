@@ -1,7 +1,7 @@
-import { Tag } from "../../../compilation";
+import type { Tag } from "../../../compilation";
 import { XmlNode } from "../../../xml";
-import { PluginUtilities } from "../../templatePlugin";
-import { ILoopStrategy, Section, SplitBeforeResult } from "./iLoopStrategy";
+import type { PluginUtilities } from "../../templatePlugin";
+import type { ILoopStrategy, Section, SplitBeforeResult } from "./iLoopStrategy";
 export declare class LoopParagraphStrategy implements ILoopStrategy {
     private utilities;
     setUtilities(utilities: PluginUtilities): void;

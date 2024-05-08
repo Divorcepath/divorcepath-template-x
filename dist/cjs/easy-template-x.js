@@ -2872,7 +2872,8 @@ class LoopParagraphStrategy {
     const {
       name,
       id: bookmarkId,
-      include
+      include,
+      mode
     } = section;
     let mergeTo = firstParagraph;
     const bookmarkStart = XmlNode.createGeneralNode("w:bookmarkStart");
@@ -2900,7 +2901,7 @@ class LoopParagraphStrategy {
     // remove the old last paragraph (was merged into the new one)
 
     XmlNode.insertAfter(bookmarkEnd, mergeTo);
-    if (firstParagraph.nodeName === "w:p" && firstParagraph.childNodes.length === 0 || include === false) {
+    if (firstParagraph.nodeName === "w:p" && firstParagraph.childNodes.length === 0 || include === false && mode === "ejectable") {
       XmlNode.remove(firstParagraph);
     }
     XmlNode.remove(lastParagraph);
@@ -2921,9 +2922,14 @@ class SectionsPlugin extends TemplatePlugin {
     this.loopStrategies.forEach(strategy => strategy.setUtilities(utilities));
   }
   async containerTagReplacements(tags, data, context) {
-    var _section$include;
     const value = data.getScopeData();
-    const section = value === null || value === void 0 ? void 0 : value.section;
+    const {
+      section
+    } = value;
+    const {
+      mode,
+      include
+    } = section;
 
     // Non array value - treat as a boolean condition.
     // const isCondition = !Array.isArray(value);
@@ -2958,7 +2964,13 @@ class SectionsPlugin extends TemplatePlugin {
 
     // repeat (loop) the content
     // const repeatedNodes = this.repeat(nodesToRepeat, value.length);
-    const repeatedNodes = this.repeat(nodesToRepeat, +((_section$include = section.include) !== null && _section$include !== void 0 ? _section$include : 1));
+    // In case of not precedents section it should be repeated, not ejected from the document
+
+    const getRepeadedNodes = () => {
+      if (mode === "hidable") return 1;
+      return +(include !== null && include !== void 0 ? include : 1);
+    };
+    const repeatedNodes = this.repeat(nodesToRepeat, getRepeadedNodes());
 
     // recursive compilation
     // (this step can be optimized in the future if we'll keep track of the
