@@ -11,7 +11,7 @@ import { type PluginUtilities, TemplatePlugin } from "../templatePlugin";
 import type { SectionContent } from "./sectionContent";
 import {
     type ILoopStrategy,
-    LoopListStrategy,
+    // LoopListStrategy,
     LoopParagraphStrategy,
 } from "./strategy";
 
@@ -21,7 +21,7 @@ export class SectionsPlugin extends TemplatePlugin {
     public readonly contentType = SECTIONS_CONTENT_TYPE;
 
     private readonly loopStrategies: ILoopStrategy[] = [
-        new LoopListStrategy(),
+        // new LoopListStrategy(),
         new LoopParagraphStrategy(), // the default strategy
     ];
 
@@ -65,7 +65,7 @@ export class SectionsPlugin extends TemplatePlugin {
         //     throw new Error(
         //         `No loop strategy found for tag '${openTag.rawText}'.`
         //     );
-        const loopStrategy = this.loopStrategies[1];
+        const [loopStrategy] = this.loopStrategies;
 
         // prepare to loop
         const { firstNode, nodesToRepeat, lastNode } = loopStrategy.splitBefore(
@@ -139,10 +139,7 @@ export class SectionsPlugin extends TemplatePlugin {
 
             // disconnect from dummy root
             const curResult: XmlNode[] = [];
-            while (
-                dummyRootNode.childNodes &&
-                dummyRootNode.childNodes.length
-            ) {
+            while (dummyRootNode.childNodes?.length) {
                 const child = XmlNode.removeChild(dummyRootNode, 0);
                 curResult.push(child);
             }

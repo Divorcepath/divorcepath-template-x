@@ -129,5 +129,114 @@ export class LoopParagraphStrategy implements ILoopStrategy {
         }
 
         XmlNode.remove(lastParagraph);
+
+        if (mode === "hidable") {
+            // hide
+            middleParagraphs
+                .flatMap((p) => p)
+                .concat(mergeTo)
+                .forEach((paragraph) => {
+                    const pCollection = XmlNode.findChildrenByNameDeep(
+                        paragraph,
+                        "w:p"
+                    );
+                    const rCollection = XmlNode.findChildrenByNameDeep(
+                        paragraph,
+                        "w:r"
+                    );
+                    const sdtPrCollection = XmlNode.findChildrenByNameDeep(
+                        paragraph,
+                        "w:sdtPr"
+                    );
+                    const trCollection = XmlNode.findChildrenByNameDeep(
+                        paragraph,
+                        "w:tr"
+                    );
+
+                    Array.from(pCollection).forEach((p) => {
+                        this.vanishParagraph(p);
+                    });
+
+                    Array.from(rCollection).forEach((wr) => {
+                        this.vanishRun(wr);
+                    });
+
+                    Array.from(sdtPrCollection).forEach((sdtPr) => {
+                        this.vanishSdtPr(sdtPr);
+                    });
+
+                    Array.from(trCollection).forEach((tr) => {
+                        this.vanishTableRow(tr);
+                    });
+
+                    if (paragraph.nodeName === "w:p") {
+                        this.vanishParagraph(paragraph);
+                    }
+                });
+        }
+    }
+
+    private vanishParagraph(p: XmlNode) {
+        let pPr = XmlNode.findChildByName(p, "w:pPr");
+
+        if (!pPr) {
+            pPr = XmlNode.createGeneralNode("w:pPr");
+            XmlNode.insertChild(p, pPr, 0);
+            // p.insertAdjacentElement("afterbegin", pPr);
+        }
+
+        let rPr = XmlNode.findChildByName(pPr, "w:rPr");
+
+        if (!rPr) {
+            // create rPr
+            rPr = XmlNode.createGeneralNode("w:rPr");
+            XmlNode.insertChild(pPr, rPr, 0);
+        }
+
+        const vanish = XmlNode.createGeneralNode("w:vanish");
+
+        XmlNode.appendChild(rPr, vanish);
+    }
+
+    private vanishRun(wr: XmlNode) {
+        let rPr = XmlNode.findChildByName(wr, "w:rPr");
+
+        if (!rPr) {
+            // create rPr
+            rPr = XmlNode.createGeneralNode("w:rPr");
+            XmlNode.insertChild(wr, rPr, 0);
+        }
+
+        const vanish = XmlNode.createGeneralNode("w:vanish");
+
+        XmlNode.appendChild(rPr, vanish);
+    }
+
+    private vanishSdtPr(sdtPr: XmlNode) {
+        let rPr = XmlNode.findChildByName(sdtPr, "w:rPr");
+
+        if (!rPr) {
+            // create rPr
+            rPr = XmlNode.createGeneralNode("w:rPr");
+            XmlNode.insertChild(sdtPr, rPr, 0);
+        }
+
+        const vanish = XmlNode.createGeneralNode("w:vanish");
+
+        XmlNode.appendChild(rPr, vanish);
+    }
+
+    private vanishTableRow(tr: XmlNode) {
+        let trPr = XmlNode.findChildByName(tr, "w:trPr");
+
+        if (!trPr) {
+            // create rPr
+            trPr = XmlNode.createGeneralNode("w:trPr");
+            XmlNode.insertChild(tr, trPr, 0);
+        }
+
+        const hidden = XmlNode.createGeneralNode("w:hidden");
+
+        XmlNode.appendChild(trPr, hidden);
     }
 }

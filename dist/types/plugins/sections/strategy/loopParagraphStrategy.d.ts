@@ -8,4 +8,8 @@ export declare class LoopParagraphStrategy implements ILoopStrategy {
     isApplicable(openTag: Tag, closeTag: Tag): boolean;
     splitBefore(openTag: Tag, closeTag: Tag): SplitBeforeResult;
     mergeBack(middleParagraphs: XmlNode[][], firstParagraph: XmlNode, lastParagraph: XmlNode, section: Section): void;
+    private vanishParagraph;
+    private vanishRun;
+    private vanishSdtPr;
+    private vanishTableRow;
 }

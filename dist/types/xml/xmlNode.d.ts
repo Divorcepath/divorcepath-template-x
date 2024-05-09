@@ -1,4 +1,4 @@
-import { IMap } from '../types';
+import { IMap } from "../types";
 export declare enum XmlNodeType {
     Text = "Text",
     General = "General"
@@ -41,6 +41,8 @@ export declare const XmlNode: {
     findParent(node: XmlNode, predicate: (node: XmlNode) => boolean): XmlNode;
     findParentByName(node: XmlNode, nodeName: string): XmlNode;
     findChildByName(node: XmlNode, childName: string): XmlNode;
+    findChildrenByName(node: XmlNode, childName: string): XmlNode[];
+    findChildrenByNameDeep(node: XmlNode, childName: string): XmlNode[];
     siblingsInRange(firstNode: XmlNode, lastNode: XmlNode): XmlNode[];
     removeEmptyTextNodes(node: XmlNode): void;
 };

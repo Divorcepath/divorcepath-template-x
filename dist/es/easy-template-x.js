@@ -417,7 +417,7 @@ let XmlNodeType = /*#__PURE__*/function (XmlNodeType) {
   XmlNodeType["General"] = "General";
   return XmlNodeType;
 }({});
-const TEXT_NODE_NAME = '#text'; // see: https://developer.mozilla.org/en-US/docs/Web/API/Node/nodeName
+const TEXT_NODE_NAME = "#text"; // see: https://developer.mozilla.org/en-US/docs/Web/API/Node/nodeName
 
 const XmlNode = {
   //
@@ -448,43 +448,43 @@ const XmlNode = {
    */
   encodeValue(str) {
     if (str === null || str === undefined) throw new MissingArgumentError("str");
-    if (typeof str !== 'string') throw new TypeError(`Expected a string, got '${str.constructor.name}'.`);
+    if (typeof str !== "string") throw new TypeError(`Expected a string, got '${str.constructor.name}'.`);
     return str.replace(/[<>&'"]/g, c => {
       switch (c) {
-        case '<':
-          return '&lt;';
-        case '>':
-          return '&gt;';
-        case '&':
-          return '&amp;';
-        case '\'':
-          return '&apos;';
+        case "<":
+          return "&lt;";
+        case ">":
+          return "&gt;";
+        case "&":
+          return "&amp;";
+        case "'":
+          return "&apos;";
         case '"':
-          return '&quot;';
+          return "&quot;";
       }
-      return '';
+      return "";
     });
   },
   serialize(node) {
-    if (this.isTextNode(node)) return this.encodeValue(node.textContent || '');
+    if (this.isTextNode(node)) return this.encodeValue(node.textContent || "");
 
     // attributes
-    let attributes = '';
+    let attributes = "";
     if (node.attributes) {
       const attributeNames = Object.keys(node.attributes);
       if (attributeNames.length) {
-        attributes = ' ' + attributeNames.map(name => `${name}="${this.encodeValue(node.attributes[name] || '')}"`).join(' ');
+        attributes = " " + attributeNames.map(name => `${name}="${this.encodeValue(node.attributes[name] || "")}"`).join(" ");
       }
     }
 
     // open tag
     const hasChildren = (node.childNodes || []).length > 0;
-    const suffix = hasChildren ? '' : '/';
+    const suffix = hasChildren ? "" : "/";
     const openTag = `<${node.nodeName}${attributes}${suffix}>`;
     let xml;
     if (hasChildren) {
       // child nodes
-      const childrenXml = node.childNodes.map(child => this.serialize(child)).join('');
+      const childrenXml = node.childNodes.map(child => this.serialize(child)).join("");
 
       // close tag
       const closeTag = `</${node.nodeName}>`;
@@ -596,7 +596,7 @@ const XmlNode = {
   },
   insertChild(parent, child, childIndex) {
     if (!parent) throw new MissingArgumentError("parent");
-    if (XmlNode.isTextNode(parent)) throw new Error('Appending children to text nodes is forbidden');
+    if (XmlNode.isTextNode(parent)) throw new Error("Appending children to text nodes is forbidden");
     if (!child) throw new MissingArgumentError("child");
     if (!parent.childNodes) parent.childNodes = [];
 
@@ -621,7 +621,7 @@ const XmlNode = {
   },
   appendChild(parent, child) {
     if (!parent) throw new MissingArgumentError("parent");
-    if (XmlNode.isTextNode(parent)) throw new Error('Appending children to text nodes is forbidden');
+    if (XmlNode.isTextNode(parent)) throw new Error("Appending children to text nodes is forbidden");
     if (!child) throw new MissingArgumentError("child");
     if (!parent.childNodes) parent.childNodes = [];
 
@@ -643,7 +643,7 @@ const XmlNode = {
    */
   remove(node) {
     if (!node) throw new MissingArgumentError("node");
-    if (!node.parentNode) throw new Error('Node has no parent');
+    if (!node.parentNode) throw new Error("Node has no parent");
     removeChild(node.parentNode, node);
   },
   removeChild,
@@ -669,7 +669,7 @@ const XmlNode = {
       const allTextNodes = node.childNodes.filter(child => XmlNode.isTextNode(child));
       if (allTextNodes.length) {
         const lastTextNode = last(allTextNodes);
-        if (!lastTextNode.textContent) lastTextNode.textContent = '';
+        if (!lastTextNode.textContent) lastTextNode.textContent = "";
         return lastTextNode;
       }
     }
@@ -678,7 +678,7 @@ const XmlNode = {
     const newTextNode = {
       nodeType: XmlNodeType.Text,
       nodeName: TEXT_NODE_NAME,
-      textContent: ''
+      textContent: ""
     };
     XmlNode.appendChild(node, newTextNode);
     return newTextNode;
@@ -750,6 +750,16 @@ const XmlNode = {
     if (!node) return null;
     return (node.childNodes || []).find(child => child.nodeName === childName);
   },
+  findChildrenByName(node, childName) {
+    if (!node) return null;
+    return (node.childNodes || []).filter(child => child.nodeName === childName);
+  },
+  findChildrenByNameDeep(node, childName) {
+    if (!node) return null;
+    const found = this.findChildrenByName(node, childName);
+    const deep = (node.childNodes || []).flatMap(child => this.findChildrenByNameDeep(child, childName));
+    return [...found, ...deep].flatMap(n => n).filter(n => n);
+  },
   /**
    * Returns all siblings between 'firstNode' and 'lastNode' inclusive.
    */
@@ -762,7 +772,7 @@ const XmlNode = {
       range.push(curNode);
       curNode = curNode.nextSibling;
     }
-    if (!curNode) throw new Error('Nodes are not siblings.');
+    if (!curNode) throw new Error("Nodes are not siblings.");
     range.push(lastNode);
     return range;
   },
@@ -789,15 +799,15 @@ const XmlNode = {
 function removeChild(parent, childOrIndex) {
   if (!parent) throw new MissingArgumentError("parent");
   if (childOrIndex === null || childOrIndex === undefined) throw new MissingArgumentError("childOrIndex");
-  if (!parent.childNodes || !parent.childNodes.length) throw new Error('Parent node has node children');
+  if (!parent.childNodes || !parent.childNodes.length) throw new Error("Parent node has node children");
 
   // get child index
   let childIndex;
-  if (typeof childOrIndex === 'number') {
+  if (typeof childOrIndex === "number") {
     childIndex = childOrIndex;
   } else {
     childIndex = parent.childNodes.indexOf(childOrIndex);
-    if (childIndex === -1) throw new Error('Specified child node is not a child of the specified parent');
+    if (childIndex === -1) throw new Error("Specified child node is not a child of the specified parent");
   }
   if (childIndex >= parent.childNodes.length) throw new RangeError(`Child index ${childIndex} is out of range. Parent has only ${parent.childNodes.length} child nodes.`);
 
@@ -2382,7 +2392,7 @@ class LinkPlugin extends TemplatePlugin {
 }
 _defineProperty(LinkPlugin, "linkRelType", 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink');
 
-class LoopListStrategy$1 {
+class LoopListStrategy {
   constructor() {
     _defineProperty(this, "utilities", void 0);
   }
@@ -2494,7 +2504,7 @@ class LoopPlugin extends TemplatePlugin {
   constructor(...args) {
     super(...args);
     _defineProperty(this, "contentType", LOOP_CONTENT_TYPE);
-    _defineProperty(this, "loopStrategies", [new LoopListStrategy$1(), new LoopParagraphStrategy$1() // the default strategy
+    _defineProperty(this, "loopStrategies", [new LoopListStrategy(), new LoopParagraphStrategy$1() // the default strategy
     ]);
   }
 
@@ -2752,46 +2762,6 @@ class TableLoopPlugin extends TemplatePlugin {
   }
 }
 
-class LoopListStrategy {
-  constructor() {
-    _defineProperty(this, "utilities", void 0);
-  }
-  setUtilities(utilities) {
-    this.utilities = utilities;
-  }
-  isApplicable(openTag, closeTag) {
-    const containingParagraph = this.utilities.docxParser.containingParagraphNode(openTag.xmlTextNode);
-    return this.utilities.docxParser.isListParagraph(containingParagraph);
-  }
-  splitBefore(openTag, closeTag) {
-    const firstParagraph = this.utilities.docxParser.containingParagraphNode(openTag.xmlTextNode);
-    const lastParagraph = this.utilities.docxParser.containingParagraphNode(closeTag.xmlTextNode);
-    const paragraphsToRepeat = XmlNode.siblingsInRange(firstParagraph, lastParagraph);
-
-    // remove the loop tags
-    XmlNode.remove(openTag.xmlTextNode);
-    XmlNode.remove(closeTag.xmlTextNode);
-    return {
-      firstNode: firstParagraph,
-      nodesToRepeat: paragraphsToRepeat,
-      lastNode: lastParagraph
-    };
-  }
-  mergeBack(paragraphGroups, firstParagraph, lastParagraphs) {
-    for (const curParagraphsGroup of paragraphGroups) {
-      for (const paragraph of curParagraphsGroup) {
-        XmlNode.insertBefore(paragraph, lastParagraphs);
-      }
-    }
-
-    // remove the old paragraphs
-    XmlNode.remove(firstParagraph);
-    if (firstParagraph !== lastParagraphs) {
-      XmlNode.remove(lastParagraphs);
-    }
-  }
-}
-
 class LoopParagraphStrategy {
   constructor() {
     _defineProperty(this, "utilities", void 0);
@@ -2878,6 +2848,77 @@ class LoopParagraphStrategy {
       XmlNode.remove(firstParagraph);
     }
     XmlNode.remove(lastParagraph);
+    if (mode === "hidable") {
+      // hide
+      middleParagraphs.flatMap(p => p).concat(mergeTo).forEach(paragraph => {
+        const pCollection = XmlNode.findChildrenByNameDeep(paragraph, "w:p");
+        const rCollection = XmlNode.findChildrenByNameDeep(paragraph, "w:r");
+        const sdtPrCollection = XmlNode.findChildrenByNameDeep(paragraph, "w:sdtPr");
+        const trCollection = XmlNode.findChildrenByNameDeep(paragraph, "w:tr");
+        Array.from(pCollection).forEach(p => {
+          this.vanishParagraph(p);
+        });
+        Array.from(rCollection).forEach(wr => {
+          this.vanishRun(wr);
+        });
+        Array.from(sdtPrCollection).forEach(sdtPr => {
+          this.vanishSdtPr(sdtPr);
+        });
+        Array.from(trCollection).forEach(tr => {
+          this.vanishTableRow(tr);
+        });
+        if (paragraph.nodeName === "w:p") {
+          this.vanishParagraph(paragraph);
+        }
+      });
+    }
+  }
+  vanishParagraph(p) {
+    let pPr = XmlNode.findChildByName(p, "w:pPr");
+    if (!pPr) {
+      pPr = XmlNode.createGeneralNode("w:pPr");
+      XmlNode.insertChild(p, pPr, 0);
+      // p.insertAdjacentElement("afterbegin", pPr);
+    }
+
+    let rPr = XmlNode.findChildByName(pPr, "w:rPr");
+    if (!rPr) {
+      // create rPr
+      rPr = XmlNode.createGeneralNode("w:rPr");
+      XmlNode.insertChild(pPr, rPr, 0);
+    }
+    const vanish = XmlNode.createGeneralNode("w:vanish");
+    XmlNode.appendChild(rPr, vanish);
+  }
+  vanishRun(wr) {
+    let rPr = XmlNode.findChildByName(wr, "w:rPr");
+    if (!rPr) {
+      // create rPr
+      rPr = XmlNode.createGeneralNode("w:rPr");
+      XmlNode.insertChild(wr, rPr, 0);
+    }
+    const vanish = XmlNode.createGeneralNode("w:vanish");
+    XmlNode.appendChild(rPr, vanish);
+  }
+  vanishSdtPr(sdtPr) {
+    let rPr = XmlNode.findChildByName(sdtPr, "w:rPr");
+    if (!rPr) {
+      // create rPr
+      rPr = XmlNode.createGeneralNode("w:rPr");
+      XmlNode.insertChild(sdtPr, rPr, 0);
+    }
+    const vanish = XmlNode.createGeneralNode("w:vanish");
+    XmlNode.appendChild(rPr, vanish);
+  }
+  vanishTableRow(tr) {
+    let trPr = XmlNode.findChildByName(tr, "w:trPr");
+    if (!trPr) {
+      // create rPr
+      trPr = XmlNode.createGeneralNode("w:trPr");
+      XmlNode.insertChild(tr, trPr, 0);
+    }
+    const hidden = XmlNode.createGeneralNode("w:hidden");
+    XmlNode.appendChild(trPr, hidden);
   }
 }
 
@@ -2886,7 +2927,9 @@ class SectionsPlugin extends TemplatePlugin {
   constructor(...args) {
     super(...args);
     _defineProperty(this, "contentType", SECTIONS_CONTENT_TYPE);
-    _defineProperty(this, "loopStrategies", [new LoopListStrategy(), new LoopParagraphStrategy() // the default strategy
+    _defineProperty(this, "loopStrategies", [
+    // new LoopListStrategy(),
+    new LoopParagraphStrategy() // the default strategy
     ]);
   }
 
@@ -2926,7 +2969,7 @@ class SectionsPlugin extends TemplatePlugin {
     //     throw new Error(
     //         `No loop strategy found for tag '${openTag.rawText}'.`
     //     );
-    const loopStrategy = this.loopStrategies[1];
+    const [loopStrategy] = this.loopStrategies;
 
     // prepare to loop
     const {
@@ -2980,7 +3023,8 @@ class SectionsPlugin extends TemplatePlugin {
 
       // disconnect from dummy root
       const curResult = [];
-      while (dummyRootNode.childNodes && dummyRootNode.childNodes.length) {
+      while ((_dummyRootNode$childN = dummyRootNode.childNodes) !== null && _dummyRootNode$childN !== void 0 && _dummyRootNode$childN.length) {
+        var _dummyRootNode$childN;
         const child = XmlNode.removeChild(dummyRootNode, 0);
         curResult.push(child);
       }
