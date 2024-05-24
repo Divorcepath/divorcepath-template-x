@@ -4,30 +4,12 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 var xmldom = require('@xmldom/xmldom');
 var getProp = require('lodash.get');
-var JSZip = require('jszip');
+var PizZipClass = require('pizzip');
 
 function _interopDefaultLegacy (e) { return e && typeof e === 'object' && 'default' in e ? e : { 'default': e }; }
 
-function _interopNamespace(e) {
-  if (e && e.__esModule) return e;
-  var n = Object.create(null);
-  if (e) {
-    Object.keys(e).forEach(function (k) {
-      if (k !== 'default') {
-        var d = Object.getOwnPropertyDescriptor(e, k);
-        Object.defineProperty(n, k, d.get ? d : {
-          enumerable: true,
-          get: function () { return e[k]; }
-        });
-      }
-    });
-  }
-  n["default"] = e;
-  return Object.freeze(n);
-}
-
 var getProp__default = /*#__PURE__*/_interopDefaultLegacy(getProp);
-var JSZip__namespace = /*#__PURE__*/_interopNamespace(JSZip);
+var PizZipClass__default = /*#__PURE__*/_interopDefaultLegacy(PizZipClass);
 
 function _defineProperty(obj, key, value) {
   key = _toPropertyKey(key);
@@ -3300,21 +3282,7 @@ class TemplateExtension {
   }
 }
 
-class JsZipHelper {
-  static toJsZipOutputType(binaryOrType) {
-    if (!binaryOrType) throw new MissingArgumentError("binaryOrType");
-    let binaryType;
-    if (typeof binaryOrType === 'function') {
-      binaryType = binaryOrType;
-    } else {
-      binaryType = binaryOrType.constructor;
-    }
-    if (Binary.isBlobConstructor(binaryType)) return 'blob';
-    if (Binary.isArrayBufferConstructor(binaryType)) return 'arraybuffer';
-    if (Binary.isBufferConstructor(binaryType)) return 'nodebuffer';
-    throw new Error(`Binary type '${binaryType.name}' is not supported.`);
-  }
-}
+// import { JsZipHelper } from './jsZipHelper';
 
 class ZipObject {
   get name() {
@@ -3329,22 +3297,28 @@ class ZipObject {
   constructor(zipObject) {
     this.zipObject = zipObject;
   }
-  getContentText() {
-    return this.zipObject.async('text');
+  async getContentText() {
+    return this.zipObject.asText();
   }
-  getContentBase64() {
-    return this.zipObject.async('binarystring');
+  async getContentBase64() {
+    return this.zipObject.asBinary();
   }
-  getContentBinary(outputType) {
-    const zipOutputType = JsZipHelper.toJsZipOutputType(outputType);
-    return this.zipObject.async(zipOutputType);
+  async getContentBinary(outputType) {
+    // const zipOutputType = JsZipHelper.toJsZipOutputType(outputType);
+    return this.zipObject.asBinary();
   }
 }
 
 class Zip {
   static async load(file) {
-    const zip = await JSZip__namespace.loadAsync(file);
-    return new Zip(zip);
+    try {
+      const pizzip = new PizZipClass__default["default"](file);
+      // const zip = pizzip.load(file as any, { optimizedBinaryString: true });
+      return new Zip(pizzip);
+    } catch (error) {
+      console.log(error);
+      throw error;
+    }
   }
   constructor(zip) {
     this.zip = zip;
@@ -3364,16 +3338,18 @@ class Zip {
     return Object.keys(this.zip.files);
   }
   async export(outputType) {
-    const zipOutputType = JsZipHelper.toJsZipOutputType(outputType);
-    const output = await this.zip.generateAsync({
-      type: zipOutputType,
-      compression: "DEFLATE",
-      compressionOptions: {
-        level: 6 // between 1 (best speed) and 9 (best compression)
-      }
+    // const zipOutputType: JSZip.OutputType = JsZipHelper.toJsZipOutputType(outputType);
+    // const output = await this.zip.generateAsync({
+    //     type: zipOutputType,
+    //     compression: "DEFLATE",
+    //     compressionOptions: {
+    //         level: 6 // between 1 (best speed) and 9 (best compression)
+    //     }
+    // });
+    // return output as T;
+    return this.zip.generate({
+      type: 'nodebuffer'
     });
-
-    return output;
   }
 }
 

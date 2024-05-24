@@ -2096,9 +2096,9 @@ __metadata:
     eslint: "npm:8.19.0"
     jest: "npm:28.1.2"
     jest-junit: "npm:14.0.0"
-    jszip: "npm:3.10.1"
     lodash.get: "npm:4.4.2"
     lorem-ipsum: "npm:2.0.8"
+    pizzip: "npm:^3.1.7"
     rimraf: "npm:3.0.2"
     rollup: "npm:2.75.7"
     rollup-plugin-auto-external: "npm:2.0.0"
@@ -3577,7 +3577,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"jszip@npm:*, jszip@npm:3.10.1":
+"jszip@npm:*":
   version: 3.10.1
   resolution: "jszip@npm:3.10.1"
   dependencies:
@@ -4088,6 +4088,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"pako@npm:^2.1.0":
+  version: 2.1.0
+  resolution: "pako@npm:2.1.0"
+  checksum: 10c0/8e8646581410654b50eb22a5dfd71159cae98145bd5086c9a7a816ec0370b5f72b4648d08674624b3870a521e6a3daffd6c2f7bc00fdefc7063c9d8232ff5116
+  languageName: node
+  linkType: hard
+
 "pako@npm:~1.0.2":
   version: 1.0.11
   resolution: "pako@npm:1.0.11"
@@ -4205,6 +4212,15 @@ __metadata:
   version: 4.0.5
   resolution: "pirates@npm:4.0.5"
   checksum: 10c0/58b6ff0f137a3d70ff34ac4802fd19819cdc19b53e9c95adecae6c7cfc77719a11f561ad85d46e79e520ef57c31145a564c8bc3bee8cfee75d441fab2928a51d
+  languageName: node
+  linkType: hard
+
+"pizzip@npm:^3.1.7":
+  version: 3.1.7
+  resolution: "pizzip@npm:3.1.7"
+  dependencies:
+    pako: "npm:^2.1.0"
+  checksum: 10c0/6bfbc4d03e3f99ee2717a2471b692b2294cd060d8d1842a147e33a9acbf6251c51f1d625cfc3eaaa4b2da43a83468558bdaea84e039d7095dbc0deba81c28d59
   languageName: node
   linkType: hard
 
