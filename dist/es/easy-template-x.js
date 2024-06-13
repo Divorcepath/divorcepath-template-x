@@ -2848,7 +2848,7 @@ class LoopParagraphStrategy {
       XmlNode.remove(firstParagraph);
     }
     XmlNode.remove(lastParagraph);
-    if (mode === "hidable") {
+    if (mode === "hidable" && !include) {
       // hide
       middleParagraphs.flatMap(p => p).concat(mergeTo).forEach(paragraph => {
         const pCollection = XmlNode.findChildrenByNameDeep(paragraph, "w:p");

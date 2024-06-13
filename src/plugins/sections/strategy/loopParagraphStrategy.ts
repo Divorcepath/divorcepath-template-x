@@ -130,7 +130,7 @@ export class LoopParagraphStrategy implements ILoopStrategy {
 
         XmlNode.remove(lastParagraph);
 
-        if (mode === "hidable") {
+        if (mode === "hidable" && !include) {
             // hide
             middleParagraphs
                 .flatMap((p) => p)
