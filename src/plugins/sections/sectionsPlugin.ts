@@ -4,14 +4,12 @@ import type {
     Tag,
     TemplateContext,
 } from "../../compilation";
-// import { TemplateData } from '../../templateData';
 import { last } from "../../utils";
 import { XmlNode } from "../../xml";
 import { type PluginUtilities, TemplatePlugin } from "../templatePlugin";
 import type { SectionContent } from "./sectionContent";
 import {
     type ILoopStrategy,
-    // LoopListStrategy,
     LoopParagraphStrategy,
 } from "./strategy";
 
@@ -21,8 +19,7 @@ export class SectionsPlugin extends TemplatePlugin {
     public readonly contentType = SECTIONS_CONTENT_TYPE;
 
     private readonly loopStrategies: ILoopStrategy[] = [
-        // new LoopListStrategy(),
-        new LoopParagraphStrategy(), // the default strategy
+        new LoopParagraphStrategy(), 
     ];
 
     public setUtilities(utilities: PluginUtilities): void {
@@ -41,30 +38,11 @@ export class SectionsPlugin extends TemplatePlugin {
 
         const { section } = value;
 
-        const { mode, include } = section;
+        // const { mode, include } = section;
 
-        // Non array value - treat as a boolean condition.
-        // const isCondition = !Array.isArray(value);
-        // if (isCondition) {
-        //     if (!!value) {
-        //         value = [{}];
-        //     } else {
-        //         value = [];
-        //     }
-        // }
-
-        // vars
         const openTag = tags[0];
         const closeTag = last(tags);
 
-        // select the suitable strategy
-        // const loopStrategy = this.loopStrategies.find((strategy) =>
-        //     strategy.isApplicable(openTag, closeTag)
-        // );
-        // if (!loopStrategy)
-        //     throw new Error(
-        //         `No loop strategy found for tag '${openTag.rawText}'.`
-        //     );
         const [loopStrategy] = this.loopStrategies;
 
         // prepare to loop
@@ -77,13 +55,14 @@ export class SectionsPlugin extends TemplatePlugin {
         // const repeatedNodes = this.repeat(nodesToRepeat, value.length);
         // In case of not precedents section it should be repeated, not ejected from the document
 
-        const getRepeadedNodes = () => {
-            if (mode === "hidable") return 1;
+        // const getRepeadedNodes = () => {
+        //     return 1;
+        //     // if (mode === "hidable") return 1;
 
-            return +(include ?? 1);
-        };
+        //     // return +(include ?? 1);
+        // };
 
-        const repeatedNodes = this.repeat(nodesToRepeat, getRepeadedNodes());
+        const repeatedNodes = this.repeat(nodesToRepeat, 1);
 
         // recursive compilation
         // (this step can be optimized in the future if we'll keep track of the

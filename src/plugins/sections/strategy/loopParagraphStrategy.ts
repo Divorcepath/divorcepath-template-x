@@ -1,11 +1,19 @@
 import type { Tag } from "../../../compilation";
-import { XmlNode } from "../../../xml";
+import { XmlNode, XmlParser } from "../../../xml";
 import type { PluginUtilities } from "../../templatePlugin";
 import type {
     ILoopStrategy,
     Section,
     SplitBeforeResult,
 } from "./iLoopStrategy";
+
+const getRandomInt = (min: number, max: number) => {
+    const minCeiled = Math.ceil(min);
+    const maxFloored = Math.floor(max);
+    return Math.floor(Math.random() * (maxFloored - minCeiled) + minCeiled); // The maximum is exclusive and the minimum is inclusive
+}
+
+const genererateContentControlId = () => getRandomInt(1_000, 1_000_000_000);
 
 export class LoopParagraphStrategy implements ILoopStrategy {
     private utilities: PluginUtilities;
@@ -84,96 +92,84 @@ export class LoopParagraphStrategy implements ILoopStrategy {
         lastParagraph: XmlNode,
         section: Section
     ): void {
-        const { name, id: bookmarkId, include, mode } = section;
-        let mergeTo = firstParagraph;
+        const { name, id, hidden = false, appearance = 'hidden', lock = false } = section;
+        
+        const tag = name;
 
-        const bookmarkStart = XmlNode.createGeneralNode("w:bookmarkStart");
-        bookmarkStart.attributes = {};
+        const sdtTemplate = `
+            <w:sdt>
+                <w:sdtPr>
+                    <w:id w:val="${id ?? genererateContentControlId()}" />
+                     <w:tag w:val="${tag}"/>
+                     <w15:appearance w15:val="${appearance}"/>
+                      ${lock ? `<w:lock w:val="sdtLocked" />` : ''}
+                </w:sdtPr>
+                <w:sdtContent>
+                </w:sdtContent>
+            </w:sdt>
+        `;
 
-        bookmarkStart.attributes["w:id"] = bookmarkId;
-        bookmarkStart.attributes["w:name"] = name ?? `sectionId_${bookmarkId}`;
-
-        const bookmarkEnd = XmlNode.createGeneralNode("w:bookmarkEnd");
-        bookmarkEnd.attributes = {};
-        bookmarkEnd.attributes["w:id"] = bookmarkId;
-
-        XmlNode.insertBefore(bookmarkStart, mergeTo);
+        const sdtNode = new XmlParser().parse(sdtTemplate);
+        const sdtContent = XmlNode.findChildByName(sdtNode, "w:sdtContent");
 
         for (const curParagraphsGroup of middleParagraphs) {
-            // merge first paragraphs
-            this.utilities.docxParser.joinParagraphs(
-                mergeTo,
-                curParagraphsGroup[0]
-            );
-
-            // add middle and last paragraphs to the original document
-            for (let i = 1; i < curParagraphsGroup.length; i++) {
-                XmlNode.insertBefore(curParagraphsGroup[i], lastParagraph);
-                mergeTo = curParagraphsGroup[i];
+            // Add middle and last paragraphs to the sdtContent
+            for (let i = 0; i < curParagraphsGroup.length; i++) {
+                XmlNode.appendChild(sdtContent, curParagraphsGroup[i]);
             }
         }
-
-        // merge last paragraph
-        // this.utilities.docxParser.joinParagraphs(mergeTo, lastParagraph);
-
-        // remove the old last paragraph (was merged into the new one)
-
-        XmlNode.insertAfter(bookmarkEnd, mergeTo);
-
-        if (
-            (firstParagraph.nodeName === "w:p" &&
-                firstParagraph.childNodes.length === 0) ||
-            (include === false && mode === "ejectable")
-        ) {
-            XmlNode.remove(firstParagraph);
-        }
+        
+        XmlNode.insertBefore(sdtNode, lastParagraph);
 
         XmlNode.remove(lastParagraph);
+        XmlNode.remove(firstParagraph);
 
-        if (mode === "hidable" && !include) {
-            // hide
-            middleParagraphs
-                .flatMap((p) => p)
-                .concat(mergeTo)
-                .forEach((paragraph) => {
-                    const pCollection = XmlNode.findChildrenByNameDeep(
-                        paragraph,
-                        "w:p"
-                    );
-                    const rCollection = XmlNode.findChildrenByNameDeep(
-                        paragraph,
-                        "w:r"
-                    );
-                    const sdtPrCollection = XmlNode.findChildrenByNameDeep(
-                        paragraph,
-                        "w:sdtPr"
-                    );
-                    const trCollection = XmlNode.findChildrenByNameDeep(
-                        paragraph,
-                        "w:tr"
-                    );
-
-                    Array.from(pCollection).forEach((p) => {
-                        this.vanishParagraph(p);
-                    });
-
-                    Array.from(rCollection).forEach((wr) => {
-                        this.vanishRun(wr);
-                    });
-
-                    Array.from(sdtPrCollection).forEach((sdtPr) => {
-                        this.vanishSdtPr(sdtPr);
-                    });
-
-                    Array.from(trCollection).forEach((tr) => {
-                        this.vanishTableRow(tr);
-                    });
-
-                    if (paragraph.nodeName === "w:p") {
-                        this.vanishParagraph(paragraph);
-                    }
-                });
+      
+        if (hidden) {
+            const paragraphs = XmlNode.findChildrenByName(sdtContent, 'w:p');
+            this.vanishParagraphs(paragraphs);
         }
+    }
+
+    private vanishParagraphs(nodes: XmlNode[]): void {
+        nodes.forEach((paragraph) => {
+            const pCollection = XmlNode.findChildrenByNameDeep(
+                paragraph,
+                "w:p"
+            );
+            const rCollection = XmlNode.findChildrenByNameDeep(
+                paragraph,
+                "w:r"
+            );
+            const sdtPrCollection = XmlNode.findChildrenByNameDeep(
+                paragraph,
+                "w:sdtPr"
+            );
+            const trCollection = XmlNode.findChildrenByNameDeep(
+                paragraph,
+                "w:tr"
+            );
+
+            Array.from(pCollection).forEach((p) => {
+                this.vanishParagraph(p);
+            });
+
+            Array.from(rCollection).forEach((wr) => {
+                this.vanishRun(wr);
+            });
+
+            Array.from(sdtPrCollection).forEach((sdtPr) => {
+                this.vanishSdtPr(sdtPr);
+            });
+
+            Array.from(trCollection).forEach((tr) => {
+                this.vanishTableRow(tr);
+            });
+
+            if (paragraph.nodeName === "w:p") {
+                this.vanishParagraph(paragraph);
+            }
+        });
     }
 
     private vanishParagraph(p: XmlNode) {

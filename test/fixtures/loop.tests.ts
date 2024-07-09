@@ -55,7 +55,7 @@ describe("loop fixtures", () => {
     //     // writeTempFile('loop - table - output.docx', doc);
     // });
 
-    it("inserts bookmarks", async () => {
+    it("inserts content controls", async () => {
         let id = 0;
         const handler = new TemplateHandler({
             scopeDataResolver: (args: ScopeDataArgs): any => {
@@ -64,6 +64,8 @@ describe("loop fixtures", () => {
                     section: {
                         name: `sectionId${id}`,
                         id: `${id++}`,
+                        include: true,
+                        mode: 'hidable'
                     },
                 };
             },

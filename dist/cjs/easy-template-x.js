@@ -2771,6 +2771,13 @@ class TableLoopPlugin extends TemplatePlugin {
   }
 }
 
+const getRandomInt = (min, max) => {
+  const minCeiled = Math.ceil(min);
+  const maxFloored = Math.floor(max);
+  return Math.floor(Math.random() * (maxFloored - minCeiled) + minCeiled); // The maximum is exclusive and the minimum is inclusive
+};
+
+const genererateContentControlId = () => getRandomInt(1_000, 1_000_000_000);
 class LoopParagraphStrategy {
   constructor() {
     _defineProperty(this, "utilities", void 0);
@@ -2823,64 +2830,62 @@ class LoopParagraphStrategy {
   mergeBack(middleParagraphs, firstParagraph, lastParagraph, section) {
     const {
       name,
-      id: bookmarkId,
-      include,
-      mode
+      id,
+      hidden = false,
+      appearance = 'hidden',
+      lock = false
     } = section;
-    let mergeTo = firstParagraph;
-    const bookmarkStart = XmlNode.createGeneralNode("w:bookmarkStart");
-    bookmarkStart.attributes = {};
-    bookmarkStart.attributes["w:id"] = bookmarkId;
-    bookmarkStart.attributes["w:name"] = name !== null && name !== void 0 ? name : `sectionId_${bookmarkId}`;
-    const bookmarkEnd = XmlNode.createGeneralNode("w:bookmarkEnd");
-    bookmarkEnd.attributes = {};
-    bookmarkEnd.attributes["w:id"] = bookmarkId;
-    XmlNode.insertBefore(bookmarkStart, mergeTo);
+    const tag = name;
+    const sdtTemplate = `
+            <w:sdt>
+                <w:sdtPr>
+                    <w:id w:val="${id !== null && id !== void 0 ? id : genererateContentControlId()}" />
+                     <w:tag w:val="${tag}"/>
+                     <w15:appearance w15:val="${appearance}"/>
+                      ${lock ? `<w:lock w:val="sdtLocked" />` : ''}
+                </w:sdtPr>
+                <w:sdtContent>
+                </w:sdtContent>
+            </w:sdt>
+        `;
+    const sdtNode = new XmlParser().parse(sdtTemplate);
+    const sdtContent = XmlNode.findChildByName(sdtNode, "w:sdtContent");
     for (const curParagraphsGroup of middleParagraphs) {
-      // merge first paragraphs
-      this.utilities.docxParser.joinParagraphs(mergeTo, curParagraphsGroup[0]);
-
-      // add middle and last paragraphs to the original document
-      for (let i = 1; i < curParagraphsGroup.length; i++) {
-        XmlNode.insertBefore(curParagraphsGroup[i], lastParagraph);
-        mergeTo = curParagraphsGroup[i];
+      // Add middle and last paragraphs to the sdtContent
+      for (let i = 0; i < curParagraphsGroup.length; i++) {
+        XmlNode.appendChild(sdtContent, curParagraphsGroup[i]);
       }
     }
-
-    // merge last paragraph
-    // this.utilities.docxParser.joinParagraphs(mergeTo, lastParagraph);
-
-    // remove the old last paragraph (was merged into the new one)
-
-    XmlNode.insertAfter(bookmarkEnd, mergeTo);
-    if (firstParagraph.nodeName === "w:p" && firstParagraph.childNodes.length === 0 || include === false && mode === "ejectable") {
-      XmlNode.remove(firstParagraph);
-    }
+    XmlNode.insertBefore(sdtNode, lastParagraph);
     XmlNode.remove(lastParagraph);
-    if (mode === "hidable" && !include) {
-      // hide
-      middleParagraphs.flatMap(p => p).concat(mergeTo).forEach(paragraph => {
-        const pCollection = XmlNode.findChildrenByNameDeep(paragraph, "w:p");
-        const rCollection = XmlNode.findChildrenByNameDeep(paragraph, "w:r");
-        const sdtPrCollection = XmlNode.findChildrenByNameDeep(paragraph, "w:sdtPr");
-        const trCollection = XmlNode.findChildrenByNameDeep(paragraph, "w:tr");
-        Array.from(pCollection).forEach(p => {
-          this.vanishParagraph(p);
-        });
-        Array.from(rCollection).forEach(wr => {
-          this.vanishRun(wr);
-        });
-        Array.from(sdtPrCollection).forEach(sdtPr => {
-          this.vanishSdtPr(sdtPr);
-        });
-        Array.from(trCollection).forEach(tr => {
-          this.vanishTableRow(tr);
-        });
-        if (paragraph.nodeName === "w:p") {
-          this.vanishParagraph(paragraph);
-        }
-      });
+    XmlNode.remove(firstParagraph);
+    if (hidden) {
+      const paragraphs = XmlNode.findChildrenByName(sdtContent, 'w:p');
+      this.vanishParagraphs(paragraphs);
     }
+  }
+  vanishParagraphs(nodes) {
+    nodes.forEach(paragraph => {
+      const pCollection = XmlNode.findChildrenByNameDeep(paragraph, "w:p");
+      const rCollection = XmlNode.findChildrenByNameDeep(paragraph, "w:r");
+      const sdtPrCollection = XmlNode.findChildrenByNameDeep(paragraph, "w:sdtPr");
+      const trCollection = XmlNode.findChildrenByNameDeep(paragraph, "w:tr");
+      Array.from(pCollection).forEach(p => {
+        this.vanishParagraph(p);
+      });
+      Array.from(rCollection).forEach(wr => {
+        this.vanishRun(wr);
+      });
+      Array.from(sdtPrCollection).forEach(sdtPr => {
+        this.vanishSdtPr(sdtPr);
+      });
+      Array.from(trCollection).forEach(tr => {
+        this.vanishTableRow(tr);
+      });
+      if (paragraph.nodeName === "w:p") {
+        this.vanishParagraph(paragraph);
+      }
+    });
   }
   vanishParagraph(p) {
     let pPr = XmlNode.findChildByName(p, "w:pPr");
@@ -2936,12 +2941,8 @@ class SectionsPlugin extends TemplatePlugin {
   constructor(...args) {
     super(...args);
     _defineProperty(this, "contentType", SECTIONS_CONTENT_TYPE);
-    _defineProperty(this, "loopStrategies", [
-    // new LoopListStrategy(),
-    new LoopParagraphStrategy() // the default strategy
-    ]);
+    _defineProperty(this, "loopStrategies", [new LoopParagraphStrategy()]);
   }
-
   setUtilities(utilities) {
     this.utilities = utilities;
     this.loopStrategies.forEach(strategy => strategy.setUtilities(utilities));
@@ -2951,33 +2952,11 @@ class SectionsPlugin extends TemplatePlugin {
     const {
       section
     } = value;
-    const {
-      mode,
-      include
-    } = section;
 
-    // Non array value - treat as a boolean condition.
-    // const isCondition = !Array.isArray(value);
-    // if (isCondition) {
-    //     if (!!value) {
-    //         value = [{}];
-    //     } else {
-    //         value = [];
-    //     }
-    // }
+    // const { mode, include } = section;
 
-    // vars
     const openTag = tags[0];
     const closeTag = last(tags);
-
-    // select the suitable strategy
-    // const loopStrategy = this.loopStrategies.find((strategy) =>
-    //     strategy.isApplicable(openTag, closeTag)
-    // );
-    // if (!loopStrategy)
-    //     throw new Error(
-    //         `No loop strategy found for tag '${openTag.rawText}'.`
-    //     );
     const [loopStrategy] = this.loopStrategies;
 
     // prepare to loop
@@ -2991,11 +2970,14 @@ class SectionsPlugin extends TemplatePlugin {
     // const repeatedNodes = this.repeat(nodesToRepeat, value.length);
     // In case of not precedents section it should be repeated, not ejected from the document
 
-    const getRepeadedNodes = () => {
-      if (mode === "hidable") return 1;
-      return +(include !== null && include !== void 0 ? include : 1);
-    };
-    const repeatedNodes = this.repeat(nodesToRepeat, getRepeadedNodes());
+    // const getRepeadedNodes = () => {
+    //     return 1;
+    //     // if (mode === "hidable") return 1;
+
+    //     // return +(include ?? 1);
+    // };
+
+    const repeatedNodes = this.repeat(nodesToRepeat, 1);
 
     // recursive compilation
     // (this step can be optimized in the future if we'll keep track of the

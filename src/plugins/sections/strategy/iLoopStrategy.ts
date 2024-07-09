@@ -3,10 +3,11 @@ import type { XmlNode } from "../../../xml";
 import type { PluginUtilities } from "../../templatePlugin";
 
 export interface Section {
-    id: string;
-    name: string;
-    include: boolean;
-    mode: "ejectable" | "hidable";
+    id?: string;
+    name?: string;
+    hidden?: boolean;
+    lock?: boolean;
+    appearance?: 'hidden' | 'boundingBox';
 }
 
 export interface ILoopStrategy {
