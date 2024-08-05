@@ -2823,7 +2823,7 @@ class LoopParagraphStrategy {
       name,
       id,
       hidden = false,
-      appearance = 'hidden',
+      appearance = "hidden",
       lock = false
     } = section;
     const tag = name;
@@ -2833,7 +2833,7 @@ class LoopParagraphStrategy {
                     <w:id w:val="${id !== null && id !== void 0 ? id : genererateContentControlId()}" />
                      <w:tag w:val="${tag}"/>
                      <w15:appearance w15:val="${appearance}"/>
-                      ${lock ? `<w:lock w:val="sdtLocked" />` : ''}
+                      ${lock ? `<w:lock w:val="sdtLocked" />` : ""}
                 </w:sdtPr>
                 <w:sdtContent>
                 </w:sdtContent>
@@ -2851,32 +2851,29 @@ class LoopParagraphStrategy {
     XmlNode.remove(lastParagraph);
     XmlNode.remove(firstParagraph);
     if (hidden) {
-      const paragraphs = XmlNode.findChildrenByName(sdtContent, 'w:p');
-      this.vanishParagraphs(paragraphs);
+      this.vanishNode(sdtContent);
     }
   }
-  vanishParagraphs(nodes) {
-    nodes.forEach(paragraph => {
-      const pCollection = XmlNode.findChildrenByNameDeep(paragraph, "w:p");
-      const rCollection = XmlNode.findChildrenByNameDeep(paragraph, "w:r");
-      const sdtPrCollection = XmlNode.findChildrenByNameDeep(paragraph, "w:sdtPr");
-      const trCollection = XmlNode.findChildrenByNameDeep(paragraph, "w:tr");
-      Array.from(pCollection).forEach(p => {
-        this.vanishParagraph(p);
-      });
-      Array.from(rCollection).forEach(wr => {
-        this.vanishRun(wr);
-      });
-      Array.from(sdtPrCollection).forEach(sdtPr => {
-        this.vanishSdtPr(sdtPr);
-      });
-      Array.from(trCollection).forEach(tr => {
-        this.vanishTableRow(tr);
-      });
-      if (paragraph.nodeName === "w:p") {
-        this.vanishParagraph(paragraph);
-      }
+  vanishNode(node) {
+    const pCollection = XmlNode.findChildrenByNameDeep(node, "w:p");
+    const rCollection = XmlNode.findChildrenByNameDeep(node, "w:r");
+    const sdtPrCollection = XmlNode.findChildrenByNameDeep(node, "w:sdtPr");
+    const trCollection = XmlNode.findChildrenByNameDeep(node, "w:tr");
+    Array.from(pCollection).forEach(p => {
+      this.vanishParagraph(p);
     });
+    Array.from(rCollection).forEach(wr => {
+      this.vanishRun(wr);
+    });
+    Array.from(sdtPrCollection).forEach(sdtPr => {
+      this.vanishSdtPr(sdtPr);
+    });
+    Array.from(trCollection).forEach(tr => {
+      this.vanishTableRow(tr);
+    });
+    if (node.nodeName === "w:p") {
+      this.vanishParagraph(node);
+    }
   }
   vanishParagraph(p) {
     let pPr = XmlNode.findChildByName(p, "w:pPr");

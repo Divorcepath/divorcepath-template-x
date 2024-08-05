@@ -11,7 +11,7 @@ const getRandomInt = (min: number, max: number) => {
     const minCeiled = Math.ceil(min);
     const maxFloored = Math.floor(max);
     return Math.floor(Math.random() * (maxFloored - minCeiled) + minCeiled); // The maximum is exclusive and the minimum is inclusive
-}
+};
 
 const genererateContentControlId = () => getRandomInt(1_000, 1_000_000_000);
 
@@ -92,8 +92,14 @@ export class LoopParagraphStrategy implements ILoopStrategy {
         lastParagraph: XmlNode,
         section: Section
     ): void {
-        const { name, id, hidden = false, appearance = 'hidden', lock = false } = section;
-        
+        const {
+            name,
+            id,
+            hidden = false,
+            appearance = "hidden",
+            lock = false,
+        } = section;
+
         const tag = name;
 
         const sdtTemplate = `
@@ -102,7 +108,7 @@ export class LoopParagraphStrategy implements ILoopStrategy {
                     <w:id w:val="${id ?? genererateContentControlId()}" />
                      <w:tag w:val="${tag}"/>
                      <w15:appearance w15:val="${appearance}"/>
-                      ${lock ? `<w:lock w:val="sdtLocked" />` : ''}
+                      ${lock ? `<w:lock w:val="sdtLocked" />` : ""}
                 </w:sdtPr>
                 <w:sdtContent>
                 </w:sdtContent>
@@ -118,58 +124,42 @@ export class LoopParagraphStrategy implements ILoopStrategy {
                 XmlNode.appendChild(sdtContent, curParagraphsGroup[i]);
             }
         }
-        
+
         XmlNode.insertBefore(sdtNode, lastParagraph);
 
         XmlNode.remove(lastParagraph);
         XmlNode.remove(firstParagraph);
 
-      
         if (hidden) {
-            const paragraphs = XmlNode.findChildrenByName(sdtContent, 'w:p');
-            this.vanishParagraphs(paragraphs);
+            this.vanishNode(sdtContent);
         }
     }
 
-    private vanishParagraphs(nodes: XmlNode[]): void {
-        nodes.forEach((paragraph) => {
-            const pCollection = XmlNode.findChildrenByNameDeep(
-                paragraph,
-                "w:p"
-            );
-            const rCollection = XmlNode.findChildrenByNameDeep(
-                paragraph,
-                "w:r"
-            );
-            const sdtPrCollection = XmlNode.findChildrenByNameDeep(
-                paragraph,
-                "w:sdtPr"
-            );
-            const trCollection = XmlNode.findChildrenByNameDeep(
-                paragraph,
-                "w:tr"
-            );
+    private vanishNode(node: XmlNode): void {
+        const pCollection = XmlNode.findChildrenByNameDeep(node, "w:p");
+        const rCollection = XmlNode.findChildrenByNameDeep(node, "w:r");
+        const sdtPrCollection = XmlNode.findChildrenByNameDeep(node, "w:sdtPr");
+        const trCollection = XmlNode.findChildrenByNameDeep(node, "w:tr");
 
-            Array.from(pCollection).forEach((p) => {
-                this.vanishParagraph(p);
-            });
-
-            Array.from(rCollection).forEach((wr) => {
-                this.vanishRun(wr);
-            });
-
-            Array.from(sdtPrCollection).forEach((sdtPr) => {
-                this.vanishSdtPr(sdtPr);
-            });
-
-            Array.from(trCollection).forEach((tr) => {
-                this.vanishTableRow(tr);
-            });
-
-            if (paragraph.nodeName === "w:p") {
-                this.vanishParagraph(paragraph);
-            }
+        Array.from(pCollection).forEach((p) => {
+            this.vanishParagraph(p);
         });
+
+        Array.from(rCollection).forEach((wr) => {
+            this.vanishRun(wr);
+        });
+
+        Array.from(sdtPrCollection).forEach((sdtPr) => {
+            this.vanishSdtPr(sdtPr);
+        });
+
+        Array.from(trCollection).forEach((tr) => {
+            this.vanishTableRow(tr);
+        });
+
+        if (node.nodeName === "w:p") {
+            this.vanishParagraph(node);
+        }
     }
 
     private vanishParagraph(p: XmlNode) {
