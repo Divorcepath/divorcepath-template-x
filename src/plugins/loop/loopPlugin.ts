@@ -22,17 +22,12 @@ export class LoopPlugin extends TemplatePlugin {
     }
 
     public async containerTagReplacements(tags: Tag[], data: ScopeData, context: TemplateContext): Promise<void> {
-
         let value = data.getScopeData<TemplateData[]>();
 
         // Non array value - treat as a boolean condition.
         const isCondition = !Array.isArray(value);
         if (isCondition) {
-            if (!!value) {
-                value = [{}];
-            } else {
-                value = [];
-            }
+            value = !!value ? [{}] : [];
         }
 
         // vars
@@ -51,9 +46,6 @@ export class LoopPlugin extends TemplatePlugin {
         const repeatedNodes = this.repeat(nodesToRepeat, value.length);
 
         // recursive compilation
-        // (this step can be optimized in the future if we'll keep track of the
-        // path to each token and use that to create new tokens instead of
-        // search through the text again)
         const compiledNodes = await this.compile(isCondition, repeatedNodes, data, context);
 
         // merge back to the document
