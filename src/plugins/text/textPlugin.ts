@@ -42,8 +42,8 @@ export class TextPlugin extends TemplatePlugin {
         // Remove empty runs within the checkbox
         this.removeEmptyRuns(runNode);
         
-        // Remove the text content to avoid creating new empty runs
-        textNode.textContent = '';
+        // Update the checkbox symbol
+        textNode.textContent = checked ? '☑' : '☐';
     }
 
     private removeEmptyRuns(runNode: XmlNode): void {
