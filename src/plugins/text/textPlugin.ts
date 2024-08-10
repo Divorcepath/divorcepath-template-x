@@ -25,42 +25,39 @@ export class TextPlugin extends TemplatePlugin {
     }
 
     private isCheckbox(textNode: XmlTextNode): boolean {
-        const runNode = this.utilities.docxParser.containingRunNode(textNode);
-        return Boolean(runNode.querySelector('w14:checkbox'));
+        const sdtNode = this.utilities.docxParser.containingSdtNode(textNode);
+        return Boolean(sdtNode?.querySelector('w14:checkbox'));
     }
 
     private replaceCheckbox(textNode: XmlTextNode, checked: boolean): void {
-        const runNode = this.utilities.docxParser.containingRunNode(textNode);
-        const checkbox = runNode.querySelector('w14:checkbox');
-        if (checkbox) {
-            const checkedAttr = checkbox.querySelector('w14:checked');
-            if (checkedAttr) {
-                checkedAttr.setAttribute('w14:val', checked ? '1' : '0');
-            }
-        }
-        
-        // Remove empty runs within the checkbox
-        this.removeEmptyRuns(runNode);
-        
-        // Update the checkbox symbol
-        textNode.textContent = checked ? '☑' : '☐';
-    }
-
-    private removeEmptyRuns(runNode: XmlNode): void {
-        const paragraphNode = runNode.parentNode;
-        if (paragraphNode) {
-            const runs = Array.from(paragraphNode.querySelectorAll('w:r'));
-            for (const run of runs) {
-                if (this.isEmptyRun(run)) {
-                    paragraphNode.removeChild(run);
+        const sdtNode = this.utilities.docxParser.containingSdtNode(textNode);
+        if (sdtNode) {
+            const checkbox = sdtNode.querySelector('w14:checkbox');
+            if (checkbox) {
+                const checkedAttr = checkbox.querySelector('w14:checked');
+                if (checkedAttr) {
+                    checkedAttr.setAttribute('w14:val', checked ? '1' : '0');
                 }
             }
+            
+            // Update the checkbox symbol
+            const sdtContentNode = sdtNode.querySelector('w:sdtContent');
+            if (sdtContentNode) {
+                const runNode = sdtContentNode.querySelector('w:r');
+                if (runNode) {
+                    const tNode = runNode.querySelector('w:t');
+                    if (tNode) {
+                        tNode.textContent = checked ? '☑' : '☐';
+                    }
+                }
+            }
+            
+            // Remove the problematic sdtEndPr element
+            const sdtEndPr = sdtNode.querySelector('w:sdtEndPr');
+            if (sdtEndPr) {
+                sdtNode.removeChild(sdtEndPr);
+            }
         }
-    }
-
-    private isEmptyRun(run: XmlNode): boolean {
-        const textNodes = run.querySelectorAll('w:t');
-        return textNodes.length === 0 || textNodes.every(node => node.textContent.trim() === '');
     }
 
     private replaceSingleLine(textNode: XmlTextNode, text: string) {
