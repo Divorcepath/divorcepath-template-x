@@ -33,21 +33,31 @@ export class SectionsPlugin extends TemplatePlugin {
         context: TemplateContext
     ): Promise<void> {
         const value = data.getScopeData<SectionContent>();
+
         const section = value?.section;
 
-        // Check if the section should be included
-        if (section.include === false) {
-            // If include is false, remove the section entirely
-            const openTag = tags[0];
-            const closeTag = last(tags);
-            XmlNode.removeNodesBetween(openTag.xmlNode, closeTag.xmlNode);
-            return;
-        }
+        // Non array value - treat as a boolean condition.
+        // const isCondition = !Array.isArray(value);
+        // if (isCondition) {
+        //     if (!!value) {
+        //         value = [{}];
+        //     } else {
+        //         value = [];
+        //     }
+        // }
 
         // vars
         const openTag = tags[0];
         const closeTag = last(tags);
 
+        // select the suitable strategy
+        // const loopStrategy = this.loopStrategies.find((strategy) =>
+        //     strategy.isApplicable(openTag, closeTag)
+        // );
+        // if (!loopStrategy)
+        //     throw new Error(
+        //         `No loop strategy found for tag '${openTag.rawText}'.`
+        //     );
         const loopStrategy = this.loopStrategies[1];
 
         // prepare to loop
@@ -56,11 +66,14 @@ export class SectionsPlugin extends TemplatePlugin {
             closeTag
         );
 
-        // Update this line to ensure a positive integer
-        const repeatCount = Math.max(1, Math.floor(+(section.include ?? 1)));
-        const repeatedNodes = this.repeat(nodesToRepeat, repeatCount);
+        // repeat (loop) the content
+        // const repeatedNodes = this.repeat(nodesToRepeat, value.length);
+        const repeatedNodes = this.repeat(nodesToRepeat, +(section.include ?? 1));
 
         // recursive compilation
+        // (this step can be optimized in the future if we'll keep track of the
+        // path to each token and use that to create new tokens instead of
+        // search through the text again)
         const compiledNodes = await this.compile(
             false,
             repeatedNodes,

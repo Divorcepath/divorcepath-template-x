@@ -380,35 +380,6 @@ export const XmlNode = {
         return removed;
     },
 
-    removeNodesBetween(start: XmlNode, end: XmlNode): void {
-        if (!start || !end) {
-            throw new Error('Both start and end nodes must be provided');
-        }
-
-        if (!start.parentNode || start.parentNode !== end.parentNode) {
-            throw new Error('Start and end nodes must have the same parent');
-        }
-
-        const parent = start.parentNode;
-        const removedNodes = this.removeSiblings(start, end);
-
-        // Remove start and end nodes
-        this.remove(start);
-        this.remove(end);
-
-        // Add removed nodes to the list (for consistency with the original removeSiblings behavior)
-        removedNodes.unshift(start);
-        removedNodes.push(end);
-
-        // Update nextSibling references
-        for (let i = 0; i < removedNodes.length - 1; i++) {
-            removedNodes[i].nextSibling = removedNodes[i + 1];
-        }
-        removedNodes[removedNodes.length - 1].nextSibling = null;
-
-        return removedNodes;
-    },
-
     /**
      * Split the original node into two sibling nodes. Returns both nodes.
      *
