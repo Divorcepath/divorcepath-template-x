@@ -2126,7 +2126,7 @@ class DocxParser {
     const firstRunNode = this.containingRunNode(from);
     const secondRunNode = this.containingRunNode(to);
     const paragraphNode = firstRunNode.parentNode;
-    if (secondRunNode.parentNode !== paragraphNode) throw new Error('Can not join text nodes from separate paragraphs.');
+    if (secondRunNode.parentNode !== paragraphNode) throw new Error(`Can not join text nodes from separate paragraphs. Start position: ${from.textContent}`);
 
     // find "word text nodes"
     const firstWordTextNode = this.containingTextNode(from);
