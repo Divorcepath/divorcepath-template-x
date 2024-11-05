@@ -3483,6 +3483,15 @@ class TemplateHandler {
     const xmlRoot = await part.xmlRoot();
     return this.compiler.parseTags(xmlRoot);
   }
+  async parseAllTags(templateFile) {
+    const docx = await this.loadDocx(templateFile);
+    const parts = await docx.getContentParts();
+    const parsedTags = (await Promise.all(parts.map(async part => {
+      const xmlRoot = await part.xmlRoot();
+      return this.compiler.parseTags(xmlRoot);
+    }))).flat().filter(tag => tag);
+    return parsedTags;
+  }
 
   /**
    * Get the text content of a single part of the document.
@@ -3530,7 +3539,7 @@ class TemplateHandler {
     try {
       zip = await Zip.load(file);
     } catch (_unused) {
-      throw new MalformedFileError('docx');
+      throw new MalformedFileError("docx");
     }
 
     // load the docx file
