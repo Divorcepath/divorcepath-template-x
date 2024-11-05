@@ -1921,31 +1921,47 @@ class Docx {
   //
 
   async getHeaderOrFooter(type) {
-    var _sectionProps$childNo, _attributes;
+    var _attributes;
     const nodeName = this.headerFooterNodeName(type);
     const nodeTypeAttribute = this.headerFooterType(type);
-
-    // find the last section properties
-    // see: http://officeopenxml.com/WPsection.php
     const docRoot = await this.mainDocument.xmlRoot();
     const body = docRoot.childNodes[0];
-    const sectionProps = last(body.childNodes.filter(node => node.nodeType === XmlNodeType.General));
-    if (sectionProps.nodeName != 'w:sectPr') return null;
+    const sectionProps = [];
 
-    // find the header or footer reference
-    const reference = (_sectionProps$childNo = sectionProps.childNodes) === null || _sectionProps$childNo === void 0 ? void 0 : _sectionProps$childNo.find(node => {
-      var _node$attributes;
-      return node.nodeType === XmlNodeType.General && node.nodeName === nodeName && ((_node$attributes = node.attributes) === null || _node$attributes === void 0 ? void 0 : _node$attributes['w:type']) === nodeTypeAttribute;
+    // Get section props from paragraphs
+    body.childNodes.forEach(node => {
+      if (node.nodeType === XmlNodeType.General && node.nodeName === 'w:p') {
+        const pPr = node.childNodes.find(child => child.nodeType === XmlNodeType.General && child.nodeName === 'w:pPr');
+        const sectPr = pPr === null || pPr === void 0 ? void 0 : pPr.childNodes.find(child => child.nodeType === XmlNodeType.General && child.nodeName === 'w:sectPr');
+        if (sectPr) {
+          sectionProps.push(sectPr);
+        }
+      }
     });
+
+    // Get document level section props
+    const docSectPr = last(body.childNodes.filter(node => node.nodeType === XmlNodeType.General && node.nodeName === 'w:sectPr'));
+    if (docSectPr) {
+      sectionProps.push(docSectPr);
+    }
+
+    // Find header/footer reference in section props
+    const reference = sectionProps.reduce((found, sectPr) => {
+      var _sectPr$childNodes;
+      if (found) return found;
+      return (_sectPr$childNodes = sectPr.childNodes) === null || _sectPr$childNodes === void 0 ? void 0 : _sectPr$childNodes.find(node => {
+        var _node$attributes;
+        return node.nodeType === XmlNodeType.General && node.nodeName === nodeName && ((_node$attributes = node.attributes) === null || _node$attributes === void 0 ? void 0 : _node$attributes['w:type']) === nodeTypeAttribute;
+      });
+    }, null);
     const relId = reference === null || reference === void 0 ? void 0 : (_attributes = reference.attributes) === null || _attributes === void 0 ? void 0 : _attributes['r:id'];
     if (!relId) return null;
 
-    // return the XmlPart
+    // Get or create XmlPart for the header/footer
     const rels = await this.mainDocument.rels.list();
     const relTarget = rels.find(r => r.id === relId).target;
     if (!this._parts[relTarget]) {
-      const part = new XmlPart("word/" + relTarget, this.zip, this.xmlParser);
-      this._parts[relTarget] = part;
+      this._parts[relTarget] = new XmlPart("word/" + relTarget, this.zip, this.xmlParser);
     }
     return this._parts[relTarget];
   }
