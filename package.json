@@ -47,7 +47,8 @@
     "dist-verify-es": "cd dist-verify/es && npm install && node main.js",
     "clean-dist-verify": "yarn clean-dist-verify-cjs && yarn clean-dist-verify-es",
     "clean-dist-verify-cjs": "rimraf dist-verify/cjs/node_modules dist-verify/cjs/package-lock.json",
-    "clean-dist-verify-es": "rimraf dist-verify/es/node_modules dist-verify/es/package-lock.json"
+    "clean-dist-verify-es": "rimraf dist-verify/es/node_modules dist-verify/es/package-lock.json",
+    "publish": "bunx jsr publish --allow-slow-types"
   },
   "packageManager": "yarn@4.3.1",
   "dependencies": {
