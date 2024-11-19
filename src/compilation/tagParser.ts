@@ -163,6 +163,18 @@ export class TagParser {
             return;
         }
 
+        if (tagName.startsWith(this.delimiters.tableTagOpen)) {
+            tag.disposition = TagDisposition.Open;
+            tag.name = tagName.slice(this.delimiters.tableTagOpen.length).trim();
+            return;
+        }
+
+        if (tagName.startsWith(this.delimiters.sectionTagOpen)) {
+            tag.disposition = TagDisposition.Open;
+            tag.name = tagName.slice(this.delimiters.sectionTagOpen.length).trim();
+            return;
+        }
+
         // Container close tag.
         if (tagName.startsWith(this.delimiters.containerTagClose)) {
             tag.disposition = TagDisposition.Close;

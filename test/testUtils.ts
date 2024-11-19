@@ -34,7 +34,7 @@ export function readResource(filename: string): Buffer {
 }
 
 export function writeTempFile(filename: string, file: Buffer): string {
-    const path = '/temp/' + filename;
+    const path = '/tmp/' + filename;
     fs.writeFileSync(path, file);
     return path;
 }

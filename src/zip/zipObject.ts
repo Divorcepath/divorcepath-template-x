@@ -1,7 +1,7 @@
-import JSZip from 'jszip';
+import * as PizZip from 'pizzip';
 import { Constructor } from '../types';
 import { Binary } from '../utils';
-import { JsZipHelper } from './jsZipHelper';
+// import { JsZipHelper } from './jsZipHelper';
 
 export class ZipObject {
 
@@ -17,18 +17,18 @@ export class ZipObject {
         return this.zipObject.dir;
     }
 
-    constructor(private readonly zipObject: JSZip.JSZipObject) { }
+    constructor(private readonly zipObject: PizZip.ZipObject) { }
 
-    public getContentText(): Promise<string> {
-        return this.zipObject.async('text');
+    public async getContentText(): Promise<string> {
+        return this.zipObject.asText();
     }
 
-    public getContentBase64(): Promise<string> {
-        return this.zipObject.async('binarystring');
+    public async getContentBase64(): Promise<string> {
+        return this.zipObject.asBinary();
     }
 
-    public getContentBinary<T extends Binary>(outputType: Constructor<T>): Promise<T> {
-        const zipOutputType: JSZip.OutputType = JsZipHelper.toJsZipOutputType(outputType);
-        return this.zipObject.async(zipOutputType) as any;
+    public async getContentBinary<T extends Binary>(outputType: Constructor<T>): Promise<T> {
+        // const zipOutputType = JsZipHelper.toJsZipOutputType(outputType);
+        return this.zipObject.asBinary() as unknown as T;
     }
 }

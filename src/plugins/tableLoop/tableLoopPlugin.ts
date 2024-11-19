@@ -3,18 +3,14 @@ import { TemplateData } from '../../templateData';
 import { last } from '../../utils';
 import { XmlNode } from '../../xml';
 import { PluginUtilities, TemplatePlugin } from '../templatePlugin';
-import { ILoopStrategy, LoopListStrategy, LoopParagraphStrategy } from './strategy';
+import { ILoopStrategy, LoopTableStrategy } from './strategy';
 
-export const LOOP_CONTENT_TYPE = 'loop';
+export const TABLE_LOOP_CONTENT_TYPE = 'table-loop';
 
-export class LoopPlugin extends TemplatePlugin {
+export class TableLoopPlugin extends TemplatePlugin {
+    public readonly contentType = TABLE_LOOP_CONTENT_TYPE;
 
-    public readonly contentType = LOOP_CONTENT_TYPE;
-
-    private readonly loopStrategies: ILoopStrategy[] = [
-        new LoopListStrategy(),
-        new LoopParagraphStrategy() // the default strategy
-    ];
+    private readonly loopStrategies: ILoopStrategy[] = [new LoopTableStrategy()];
 
     public setUtilities(utilities: PluginUtilities): void {
         this.utilities = utilities;
@@ -22,13 +18,12 @@ export class LoopPlugin extends TemplatePlugin {
     }
 
     public async containerTagReplacements(tags: Tag[], data: ScopeData, context: TemplateContext): Promise<void> {
-
         let value = data.getScopeData<TemplateData[]>();
 
         // Non array value - treat as a boolean condition.
         const isCondition = !Array.isArray(value);
         if (isCondition) {
-            if (value) {
+            if (!!value) {
                 value = [{}];
             } else {
                 value = [];
@@ -41,8 +36,7 @@ export class LoopPlugin extends TemplatePlugin {
 
         // select the suitable strategy
         const loopStrategy = this.loopStrategies.find(strategy => strategy.isApplicable(openTag, closeTag));
-        if (!loopStrategy)
-            throw new Error(`No loop strategy found for tag '${openTag.rawText}'.`);
+        if (!loopStrategy) throw new Error(`No loop strategy found for tag '${openTag.rawText}'.`);
 
         // prepare to loop
         const { firstNode, nodesToRepeat, lastNode } = loopStrategy.splitBefore(openTag, closeTag);
@@ -61,8 +55,7 @@ export class LoopPlugin extends TemplatePlugin {
     }
 
     private repeat(nodes: XmlNode[], times: number): XmlNode[][] {
-        if (!nodes.length || !times)
-            return [];
+        if (!nodes.length || !times) return [];
 
         const allResults: XmlNode[][] = [];
 
@@ -74,12 +67,16 @@ export class LoopPlugin extends TemplatePlugin {
         return allResults;
     }
 
-    private async compile(isCondition: boolean, nodeGroups: XmlNode[][], data: ScopeData, context: TemplateContext): Promise<XmlNode[][]> {
+    private async compile(
+        isCondition: boolean,
+        nodeGroups: XmlNode[][],
+        data: ScopeData,
+        context: TemplateContext
+    ): Promise<XmlNode[][]> {
         const compiledNodeGroups: XmlNode[][] = [];
 
         // compile each node group with it's relevant data
         for (let i = 0; i < nodeGroups.length; i++) {
-
             // create dummy root node
             const curNodes = nodeGroups[i];
             const dummyRootNode = XmlNode.createGeneralNode('dummyRootNode');
@@ -103,13 +100,14 @@ export class LoopPlugin extends TemplatePlugin {
     }
 
     private updatePathBefore(isCondition: boolean, data: ScopeData, groupIndex: number): PathPart {
-
         // if it's a condition - don't go deeper in the path
         // (so we need to extract the already pushed condition tag)
         if (isCondition) {
             if (groupIndex > 0) {
                 // should never happen - conditions should have at most one (synthetic) child...
-                throw new Error(`Internal error: Unexpected group index ${groupIndex} for boolean condition at path "${data.pathString()}".`);
+                throw new Error(
+                    `Internal error: Unexpected group index ${groupIndex} for boolean condition at path "${data.pathString()}".`
+                );
             }
             return data.pathPop();
         }
@@ -120,7 +118,6 @@ export class LoopPlugin extends TemplatePlugin {
     }
 
     private updatePathAfter(isCondition: boolean, data: ScopeData, conditionTag: PathPart): void {
-
         // reverse the "before" path operation
         if (isCondition) {
             data.pathPush(conditionTag);
@@ -129,4 +126,3 @@ export class LoopPlugin extends TemplatePlugin {
         }
     }
 }
-
