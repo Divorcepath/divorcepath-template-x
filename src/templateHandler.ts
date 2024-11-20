@@ -121,7 +121,7 @@ export class TemplateHandler {
      */
     public async parseTags(templateFile: Binary, contentPart = ContentPartType.MainDocument): Promise<Tag[]> {
         const docx = await this.loadDocx(templateFile);
-        const part = await docx.getContentPart(contentPart);
+        const [part] = await docx.getContentPart(contentPart);
         const xmlRoot = await part.xmlRoot();
         return this.compiler.parseTags(xmlRoot);
     }
@@ -154,7 +154,7 @@ export class TemplateHandler {
      */
     public async getText(docxFile: Binary, contentPart = ContentPartType.MainDocument): Promise<string> {
         const docx = await this.loadDocx(docxFile);
-        const part = await docx.getContentPart(contentPart);
+        const [part] = await docx.getContentPart(contentPart);
         const text = await part.getText();
         return text;
     }
@@ -169,7 +169,7 @@ export class TemplateHandler {
      */
     public async getXml(docxFile: Binary, contentPart = ContentPartType.MainDocument): Promise<XmlNode> {
         const docx = await this.loadDocx(docxFile);
-        const part = await docx.getContentPart(contentPart);
+        const [part] = await docx.getContentPart(contentPart);
         const xmlRoot = await part.xmlRoot();
         return xmlRoot;
     }
