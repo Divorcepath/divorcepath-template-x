@@ -36,7 +36,7 @@ class MatchState {
 
 export class DelimiterSearcher {
 
-    public maxXmlDepth = 20;
+    public maxXmlDepth = 30;
     public startDelimiter = "{";
     public endDelimiter = "}";
 
