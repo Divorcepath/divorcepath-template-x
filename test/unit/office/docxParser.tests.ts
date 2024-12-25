@@ -108,6 +108,38 @@ describe(nameof(DocxParser), () => {
             expect(fromXmlTextNode.textContent).toEqual('234');
         });
 
+        it('throws error when range is in separate paragraphs', () => {
+            const body = parseXml(`
+                <w:body>
+                    <w:p>
+                        <w:r>
+                            <w:t>{#</w:t>
+                        </w:r>
+                         <w:r>
+                            <w:t>tag}</w:t>
+                        </w:r>
+                        <w:r>
+                            <w:t>content</w:t>
+                        </w:r>
+                    </w:p>
+                    <w:p>
+                        <w:r>
+                            <w:t>{/}</w:t>
+                        </w:r>
+                    </w:p>
+                </w:body>
+            `);
+            const runNode = body.childNodes[0].childNodes[0];
+            const firstXmlTextNode = runNode.childNodes[0].childNodes[0] as XmlTextNode;
+            expect(firstXmlTextNode.textContent).toEqual('{#');
+            const lastRunNode = body.childNodes[1].childNodes[0];
+            const lastXmlTextNode = lastRunNode.childNodes[0].childNodes[0] as XmlTextNode;
+            expect(lastXmlTextNode.textContent).toEqual('{/}');
+
+            const parser = createDocxParser();
+            expect(() => parser.joinTextNodesRange(firstXmlTextNode, lastXmlTextNode)).toThrowErrorMatchingInlineSnapshot(`"Can not join text nodes from separate paragraphs. Start position: {#tag}content"`);
+        });
+
     });
 
 });

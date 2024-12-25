@@ -187,8 +187,23 @@ export class DocxParser {
         const secondRunNode = this.containingRunNode(to);
 
         const paragraphNode = firstRunNode.parentNode;
-        if (secondRunNode.parentNode !== paragraphNode)
-            throw new Error(`Can not join text nodes from separate paragraphs. Start position: ${from.textContent}`);
+
+        // If nodes are in different paragraphs, collect all text in first paragraph before throwing
+        if (secondRunNode.parentNode !== paragraphNode) {
+            const textInFirstParagraph: string[] = [];
+            let currentRun = firstRunNode;
+
+            while (currentRun && currentRun.parentNode === paragraphNode) {
+                const textNode = this.firstTextNodeChild(currentRun);
+                if (textNode) {
+                    const xmlTextNode = XmlNode.lastTextChild(textNode);
+                    textInFirstParagraph.push(xmlTextNode.textContent);
+                }
+                currentRun = currentRun.nextSibling;
+            }
+
+            throw new Error(`Can not join text nodes from separate paragraphs. Start position: ${textInFirstParagraph.join('')}`);
+        }
 
         // find "word text nodes"
         const firstWordTextNode = this.containingTextNode(from);
