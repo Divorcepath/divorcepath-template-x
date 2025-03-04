@@ -21,8 +21,7 @@ export class SectionsPlugin extends TemplatePlugin {
         const value = data.getScopeData<SectionContent>();
 
         const { section } = value;
-
-        // const { mode, include } = section;
+        const { hideMode = 'hidable', hidden = false} = section;
 
         const openTag = tags[0];
         const closeTag = last(tags);
@@ -36,14 +35,13 @@ export class SectionsPlugin extends TemplatePlugin {
         // const repeatedNodes = this.repeat(nodesToRepeat, value.length);
         // In case of not precedents section it should be repeated, not ejected from the document
 
-        // const getRepeadedNodes = () => {
-        //     return 1;
-        //     // if (mode === "hidable") return 1;
+        const getRepeadedNodes = () => {
+            if (hideMode === "hidable") return 1;
 
-        //     // return +(include ?? 1);
-        // };
+            return hidden ? 0 : 1;
+        };
 
-        const repeatedNodes = this.repeat(nodesToRepeat, 1);
+        const repeatedNodes = this.repeat(nodesToRepeat, getRepeadedNodes());
 
         // recursive compilation
         // (this step can be optimized in the future if we'll keep track of the

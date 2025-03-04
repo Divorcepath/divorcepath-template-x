@@ -6,6 +6,7 @@ export interface Section {
     id?: string;
     name?: string;
     hidden?: boolean;
+    hideMode: 'hidable' | 'excludable';
     lock?: boolean;
     appearance?: 'hidden' | 'boundingBox';
 }
