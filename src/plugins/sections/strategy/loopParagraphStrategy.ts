@@ -70,7 +70,29 @@ export class LoopParagraphStrategy implements ILoopStrategy {
         lastParagraph: XmlNode,
         section: Section
     ): void {
-        const { name, id, hidden = false, appearance = 'hidden', lock = false } = section;
+        const { name, id, hidden = false, appearance = 'hidden', lock = false, hideMode = 'hidable' } = section;
+
+        if (middleParagraphs.length === 0 && hideMode === 'excludable' && hidden) {
+            // Check if paragraph is inside a table row/cell. If it is, we must preserve row structure, so just vanish paragraph
+            const isInsideTable = (node: XmlNode | null): boolean => {
+                let cur: XmlNode | null = node;
+                while (cur) {
+                    if (cur.nodeName === 'w:tr' || cur.nodeName === 'w:tbl') return true;
+                    cur = cur.parentNode as XmlNode | null;
+                }
+                return false;
+            };
+
+            if (!isInsideTable(firstParagraph)) {
+                XmlNode.remove(firstParagraph);
+                XmlNode.remove(lastParagraph);
+            } else {
+                // Inside table: just vanish content to keep cells/rows intact
+                this.vanishParagraph(firstParagraph);
+                this.vanishParagraph(lastParagraph);
+            }
+            return;
+        }
 
         const tag = name;
 
