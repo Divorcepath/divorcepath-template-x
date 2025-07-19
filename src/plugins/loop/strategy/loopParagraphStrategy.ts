@@ -77,5 +77,37 @@ export class LoopParagraphStrategy implements ILoopStrategy {
 
         // remove the old last paragraph (was merged into the new one)
         XmlNode.remove(lastParagraph);
+
+        // After merging, clean up any empty runs that might have been left
+        // inside the resulting paragraph. These empty <w:r> elements can
+        // introduce unwanted spacing/formatting issues in the generated
+        // document when a section/condition is excluded (i.e. the loop
+        // executes zero times). We iterate over the paragraph's direct
+        // children and remove any run node that the DocxParser identifies
+        // as empty. This operation is safe for non-table structures and
+        // will not impact table loop behaviour because table handling uses
+        // the LoopTableStrategy, not this paragraph strategy.
+
+        let childIdx = 0;
+        while (mergeTo.childNodes && childIdx < mergeTo.childNodes.length) {
+            const child = mergeTo.childNodes[childIdx];
+            if (
+                this.utilities.docxParser.isRunNode(child) &&
+                this.utilities.docxParser.isEmptyRun(child)
+            ) {
+                XmlNode.removeChild(mergeTo, childIdx);
+            } else {
+                childIdx++;
+            }
+        }
+    }
+
+    /**
+     * Ensure TypeScript treats the utility methods as used even if tree-shaking
+     * is applied in some build configurations.
+     */
+    /* istanbul ignore next */
+    private _noop(): void {
+        // Intentionally empty – keeps private helper methods referenced.
     }
 }

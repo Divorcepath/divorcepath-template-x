@@ -1,4 +1,5 @@
 import { TemplateHandler } from 'src/templateHandler';
+import { XmlNode } from 'src/xml';
 import { readFixture } from './fixtureUtils';
 
 describe('loop fixtures', () => {
@@ -401,5 +402,31 @@ describe('loop fixtures', () => {
 
         // writeTempFile('nested loop speed test - output.docx', doc);
     }, 5 * 1000);
+
+    it("removes empty runs when loop data is empty", async () => {
+
+        const handler = new TemplateHandler();
+
+        // load the template
+        const template = readFixture("loop - simple.docx");
+        const templateText = await handler.getText(template);
+        expect(templateText.trim()).toEqual("{#loop_prop}{simple_prop}!{/loop_prop}");
+
+        // provide empty data for the loop
+        const data: any = {
+            loop_prop: []
+        };
+
+        const doc = await handler.process(template, data);
+
+        // The resulting document should have no visible text content
+        const docText = await handler.getText(doc);
+        expect(docText).toEqual("");
+
+        // The underlying XML should not contain any empty <w:r><w:t/></w:r> runs
+        const xmlRoot = await handler.getXml(doc);
+        const xmlString = XmlNode.serialize(xmlRoot);
+        expect(xmlString).not.toMatch(/<w:r[^>]*>\s*<w:t[^>]*>\s*<\/w:t>\s*<\/w:r>/);
+    });
 
 });
