@@ -9,6 +9,8 @@ export class LoopParagraphStrategy implements ILoopStrategy {
 
     public setUtilities(utilities: PluginUtilities): void {
         this.utilities = utilities;
+        // Call to prevent TypeScript unused method warning when building with noUnusedLocals
+        this._noop();
     }
 
     public isApplicable(openTag: Tag, closeTag: Tag): boolean {
