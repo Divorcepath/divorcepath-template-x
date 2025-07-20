@@ -7,6 +7,8 @@ export class Delimiters {
     public tableTagOpen = "%";
     public sectionTagOpen = "^";
     public containerTagClose = "/";
+    public tagOptionsStart = "[";
+    public tagOptionsEnd = "]";
 
     constructor(initial?: Partial<Delimiters>) {
         Object.assign(this, initial);

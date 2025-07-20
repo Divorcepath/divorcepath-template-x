@@ -1,3 +1,3 @@
-export * from './xmlDepthTracker';
-export * from './xmlNode';
-export * from './xmlParser';
+export * from './xmlDepthTracker.js';
+export * from './xmlNode.js';
+export * from './xmlParser.js';

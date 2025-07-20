@@ -1,2 +1,2 @@
-export * from './imageContent';
-export * from './imagePlugin';
+export * from './imageContent.js';
+export * from './imagePlugin.js';

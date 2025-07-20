@@ -1,4 +1,4 @@
-import { TemplateExtension } from "./templateExtension";
+import { TemplateExtension } from "./templateExtension.js";
 
 export interface ExtensionOptions {
     beforeCompilation?: TemplateExtension[];

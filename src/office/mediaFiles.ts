@@ -1,7 +1,7 @@
-import { MimeType, MimeTypeHelper } from '../mimeType';
-import { IMap } from '../types';
-import { Binary, Path, sha1 } from '../utils';
-import { Zip } from '../zip';
+import { MimeType, MimeTypeHelper } from '../mimeType.js';
+import { IMap } from '../types.js';
+import { Binary, Path, sha1 } from '../utils/index.js';
+import { Zip } from '../zip/index.js';
 
 /**
  * Handles media files of the main document.

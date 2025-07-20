@@ -1,18 +1,14 @@
-import {
-    UnclosedTagError,
-    UnknownContentTypeError,
-    UnopenedTagError,
-} from "../errors";
-import { PluginContent, TemplatePlugin } from "../plugins";
-import { IMap } from "../types";
-import { Delimiters } from "../delimiters";
-import { isPromiseLike, stringValue, toDictionary } from "../utils";
-import { XmlNode } from "../xml";
-import { DelimiterSearcher } from "./delimiterSearcher";
-import { ScopeData } from "./scopeData";
-import { Tag, TagDisposition } from "./tag";
-import { TagParser } from "./tagParser";
-import { TemplateContext } from "./templateContext";
+import { UnclosedTagError, UnknownContentTypeError, UnopenedTagError } from '../errors/index.js';
+import { PluginContent, TemplatePlugin } from '../plugins/index.js';
+import { IMap } from '../types.js';
+import { Delimiters } from '../delimiters.js';
+import { isPromiseLike, stringValue, toDictionary } from '../utils/index.js';
+import { XmlNode } from '../xml/index.js';
+import { DelimiterSearcher } from './delimiterSearcher.js';
+import { ScopeData } from './scopeData.js';
+import { Tag, TagDisposition } from './tag.js';
+import { TagParser } from './tagParser.js';
+import { TemplateContext } from './templateContext.js';
 
 export interface TemplateCompilerOptions {
     defaultContentType: string;
@@ -42,18 +38,14 @@ export class TemplateCompiler {
         plugins: TemplatePlugin[],
         private readonly options: TemplateCompilerOptions
     ) {
-        this.pluginsLookup = toDictionary(plugins, (p) => p.contentType);
+        this.pluginsLookup = toDictionary(plugins, p => p.contentType);
     }
 
     /**
      * Compiles the template and performs the required replacements using the
      * specified data.
      */
-    public async compile(
-        node: XmlNode,
-        data: ScopeData,
-        context: TemplateContext
-    ): Promise<void> {
+    public async compile(node: XmlNode, data: ScopeData, context: TemplateContext): Promise<void> {
         const tags = this.parseTags(node);
         await this.doTagReplacements(tags, data, context);
     }
@@ -68,42 +60,26 @@ export class TemplateCompiler {
     // private methods
     //
 
-    private async doTagReplacements(
-        tags: Tag[],
-        data: ScopeData,
-        context: TemplateContext
-    ): Promise<void> {
+    private async doTagReplacements(tags: Tag[], data: ScopeData, context: TemplateContext): Promise<void> {
         for (let tagIndex = 0; tagIndex < tags.length; tagIndex++) {
             const tag = tags[tagIndex];
             data.pathPush(tag);
             const contentType = this.detectContentType(tag, data);
             const plugin = this.pluginsLookup[contentType];
             if (!plugin) {
-                throw new UnknownContentTypeError(
-                    contentType,
-                    tag.rawText,
-                    data.pathString()
-                );
+                throw new UnknownContentTypeError(contentType, tag.rawText, data.pathString());
             }
 
             if (tag.disposition === TagDisposition.SelfClosed) {
                 await this.simpleTagReplacements(plugin, tag, data, context);
             } else if (tag.disposition === TagDisposition.Open) {
                 // get all tags between the open and close tags
-                const closingTagIndex = this.findCloseTagIndex(
-                    tagIndex,
-                    tag,
-                    tags
-                );
+                const closingTagIndex = this.findCloseTagIndex(tagIndex, tag, tags);
                 const scopeTags = tags.slice(tagIndex, closingTagIndex + 1);
                 tagIndex = closingTagIndex;
 
                 // replace container tag
-                const job = plugin.containerTagReplacements(
-                    scopeTags,
-                    data,
-                    context
-                );
+                const job = plugin.containerTagReplacements(scopeTags, data, context);
                 if (isPromiseLike(job)) {
                     await job;
                 }
@@ -119,10 +95,7 @@ export class TemplateCompiler {
         const scopeData = data.getScopeData();
         if (PluginContent.isPluginContent(scopeData)) return scopeData._type;
 
-        if (
-            tag.disposition === TagDisposition.Open ||
-            tag.disposition === TagDisposition.Close
-        ) {
+        if (tag.disposition === TagDisposition.Open || tag.disposition === TagDisposition.Close) {
             // implicit
             if (tag.rawText.startsWith(`{${this.delimiters.tableTagOpen}`)) {
                 return this.options.tableContainerContentType;
@@ -145,10 +118,7 @@ export class TemplateCompiler {
         data: ScopeData,
         context: TemplateContext
     ): Promise<void> {
-        if (
-            this.options.skipEmptyTags &&
-            stringValue(data.getScopeData()) === ""
-        ) {
+        if (this.options.skipEmptyTags && stringValue(data.getScopeData()) === '') {
             return;
         }
 
@@ -158,11 +128,7 @@ export class TemplateCompiler {
         }
     }
 
-    private findCloseTagIndex(
-        fromIndex: number,
-        openTag: Tag,
-        tags: Tag[]
-    ): number {
+    private findCloseTagIndex(fromIndex: number, openTag: Tag, tags: Tag[]): number {
         let openTags = 0;
         let i = fromIndex;
         for (; i < tags.length; i++) {

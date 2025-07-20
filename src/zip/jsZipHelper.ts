@@ -1,13 +1,12 @@
-import * as JSZip from 'jszip';
-import { MissingArgumentError } from '../errors';
-import { Constructor } from '../types';
-import { Binary } from '../utils';
+import { MissingArgumentError } from '../errors/index.ts';
+import { Constructor } from '../types.ts';
+import { Binary } from '../utils/index.ts';
 
 export class JsZipHelper {
 
-    public static toJsZipOutputType(binary: Binary): JSZip.OutputType;
-    public static toJsZipOutputType(binaryType: Constructor<Binary>): JSZip.OutputType;
-    public static toJsZipOutputType(binaryOrType: Binary | Constructor<Binary>): JSZip.OutputType {
+    public static toJsZipOutputType(binary: Binary): any;
+    public static toJsZipOutputType(binaryType: Constructor<Binary>): any;
+    public static toJsZipOutputType(binaryOrType: Binary | Constructor<Binary>): any {
 
         if (!binaryOrType)
             throw new MissingArgumentError(nameof(binaryOrType));

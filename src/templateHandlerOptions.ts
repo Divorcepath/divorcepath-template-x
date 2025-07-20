@@ -1,7 +1,7 @@
-import { ScopeDataResolver } from './compilation';
-import { Delimiters } from './delimiters';
-import { ExtensionOptions } from './extensions';
-import { createDefaultPlugins, LOOP_CONTENT_TYPE, TABLE_LOOP_CONTENT_TYPE, SECTIONS_CONTENT_TYPE, TemplatePlugin, TEXT_CONTENT_TYPE } from './plugins';
+import { ScopeDataResolver } from './compilation/index.js';
+import { Delimiters } from './delimiters.js';
+import { ExtensionOptions } from './extensions/index.js';
+import { createDefaultPlugins, LOOP_CONTENT_TYPE, TABLE_LOOP_CONTENT_TYPE, SECTIONS_CONTENT_TYPE, TemplatePlugin, TEXT_CONTENT_TYPE } from './plugins/index.js';
 
 export class TemplateHandlerOptions {
 

@@ -1,21 +1,20 @@
-import { DelimiterSearcher, ScopeData, Tag, TagParser, TemplateCompiler, TemplateContext } from './compilation';
-import { Delimiters } from './delimiters';
-import { MalformedFileError } from './errors';
-import { TemplateExtension } from './extensions';
-import { ContentPartType, Docx, DocxParser } from './office';
-import { TemplateData } from './templateData';
-import { TemplateHandlerOptions } from './templateHandlerOptions';
-import { Constructor } from './types';
-import { Binary } from './utils';
-import { XmlNode, XmlParser } from './xml';
-import { Zip } from './zip';
+import { DelimiterSearcher, ScopeData, Tag, TagParser, TemplateCompiler, TemplateContext } from './compilation/index.js';
+import { Delimiters } from './delimiters.js';
+import { MalformedFileError } from './errors/index.js';
+import { TemplateExtension } from './extensions/index.js';
+import { ContentPartType, Docx, DocxParser } from './office/index.js';
+import { TemplateData } from './templateData.js';
+import { TemplateHandlerOptions } from './templateHandlerOptions.js';
+import { Constructor } from './types.js';
+import { Binary } from './utils/index.js';
+import { XmlNode, XmlParser } from './xml/index.js';
+import { Zip } from './zip/index.js';
 
 export class TemplateHandler {
-
     /**
      * Version number of the `easy-template-x` library.
      */
-    public readonly version = (typeof EASY_VERSION !== 'undefined' ? EASY_VERSION : 'null');
+    public readonly version = typeof EASY_VERSION !== 'undefined' ? EASY_VERSION : 'null';
 
     private readonly xmlParser = new XmlParser();
     private readonly docxParser: DocxParser;
@@ -49,7 +48,7 @@ export class TemplateHandler {
                 defaultContentType: this.options.defaultContentType,
                 containerContentType: this.options.containerContentType,
                 tableContainerContentType: this.options.tableContainerContentType,
-                sectionsContentType: this.options.sectionContentType,
+                sectionsContentType: this.options.sectionContentType
             }
         );
 
@@ -82,7 +81,6 @@ export class TemplateHandler {
     //
 
     public async process<T extends Binary>(templateFile: T, data: TemplateData): Promise<T> {
-
         // load the docx file
         const docx = await this.loadDocx(templateFile);
 
@@ -96,7 +94,6 @@ export class TemplateHandler {
 
         const contentParts = await docx.getContentParts();
         for (const part of contentParts) {
-
             context.currentPart = part;
 
             // extensions - before compilation
@@ -124,9 +121,27 @@ export class TemplateHandler {
      */
     public async parseTags(templateFile: Binary, contentPart = ContentPartType.MainDocument): Promise<Tag[]> {
         const docx = await this.loadDocx(templateFile);
-        const part = await docx.getContentPart(contentPart);
+        const [part] = await docx.getContentPart(contentPart);
         const xmlRoot = await part.xmlRoot();
         return this.compiler.parseTags(xmlRoot);
+    }
+
+    public async parseAllTags(templateFile: Binary): Promise<Tag[]> {
+        const docx = await this.loadDocx(templateFile);
+        const parts = await docx.getContentParts();
+
+        const parsedTags: Tag[] = (
+            await Promise.all(
+                parts.map(async part => {
+                    const xmlRoot = await part.xmlRoot();
+                    return this.compiler.parseTags(xmlRoot);
+                })
+            )
+        )
+            .flat()
+            .filter(tag => tag);
+
+        return parsedTags;
     }
 
     /**
@@ -139,7 +154,7 @@ export class TemplateHandler {
      */
     public async getText(docxFile: Binary, contentPart = ContentPartType.MainDocument): Promise<string> {
         const docx = await this.loadDocx(docxFile);
-        const part = await docx.getContentPart(contentPart);
+        const [part] = await docx.getContentPart(contentPart);
         const text = await part.getText();
         return text;
     }
@@ -154,7 +169,7 @@ export class TemplateHandler {
      */
     public async getXml(docxFile: Binary, contentPart = ContentPartType.MainDocument): Promise<XmlNode> {
         const docx = await this.loadDocx(docxFile);
-        const part = await docx.getContentPart(contentPart);
+        const [part] = await docx.getContentPart(contentPart);
         const xmlRoot = await part.xmlRoot();
         return xmlRoot;
     }
@@ -163,9 +178,12 @@ export class TemplateHandler {
     // private methods
     //
 
-    private async callExtensions(extensions: TemplateExtension[], scopeData: ScopeData, context: TemplateContext): Promise<void> {
-        if (!extensions)
-            return;
+    private async callExtensions(
+        extensions: TemplateExtension[],
+        scopeData: ScopeData,
+        context: TemplateContext
+    ): Promise<void> {
+        if (!extensions) return;
 
         for (const extension of extensions) {
             await extension.execute(scopeData, context);
@@ -173,7 +191,6 @@ export class TemplateHandler {
     }
 
     private async loadDocx(file: Binary): Promise<Docx> {
-
         // load the zip file
         let zip: Zip;
         try {

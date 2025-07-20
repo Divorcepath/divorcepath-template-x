@@ -1,1 +1,1 @@
-export * from './loopPlugin';
+export * from './loopPlugin.js';

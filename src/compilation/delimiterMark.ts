@@ -1,4 +1,4 @@
-import { XmlTextNode } from "../xml";
+import { XmlTextNode } from "../xml/index.js";
 
 export interface DelimiterMark {
 

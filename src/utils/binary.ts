@@ -1,6 +1,6 @@
-import { Constructor } from '../types';
-import { Base64 } from './base64';
-import { inheritsFrom } from './types';
+import { Constructor } from '../types.js';
+import { Base64 } from './base64.js';
+import { inheritsFrom } from './types.js';
 
 export type Binary = Blob | Buffer | ArrayBuffer;
 

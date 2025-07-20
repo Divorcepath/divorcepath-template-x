@@ -1,4 +1,6 @@
-export class MissingArgumentError extends Error {
+import { ArgumentError } from './argumentError.js';
+
+export class MissingArgumentError extends ArgumentError {
 
     public readonly argName: string;
 
@@ -6,8 +8,5 @@ export class MissingArgumentError extends Error {
         super(`Argument '${argName}' is missing.`);
 
         this.argName = argName;
-
-        // typescript hack: https://github.com/Microsoft/TypeScript-wiki/blob/master/Breaking-Changes.md#extending-built-ins-like-error-array-and-map-may-no-longer-work
-        Object.setPrototypeOf(this, MissingArgumentError.prototype);
     }
 }

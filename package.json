@@ -1,76 +1,18 @@
 {
-  "name": "easy-template-x",
-  "version": "3.1.0",
-  "description": "Generate docx documents from templates, in Node or in the browser.",
-  "keywords": [
-    "docx",
-    "template",
-    "word",
-    "office",
-    "microsoft",
-    "ms"
-  ],
-  "author": "Alon Bar",
-  "license": "MIT",
-  "homepage": "https://github.com/alonrbar/easy-template-x",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/alonrbar/easy-template-x.git"
-  },
-  "bugs": {
-    "url": "https://github.com/alonrbar/easy-template-x/issues"
-  },
-  "main": "dist/cjs/easy-template-x.js",
-  "module": "dist/es/easy-template-x.js",
-  "typings": "dist/types/index.d.ts",
-  "files": [
-    "dist",
-    "src"
-  ],
-  "scripts": {
-    "clean": "rimraf .tmp dist test-reports",
-    "typecheck": "tsc --noEmit",
-    "lint": "eslint \"./{src,test}/**/!(*.d).ts\"",
-    "test": "jest --verbose",
-    "quality": "yarn typecheck && yarn lint && yarn test",
-    "build-src": "rollup -c",
-    "build-types": "tsc -p tsconfig.types.json --emitDeclarationOnly",
-    "build": "yarn build-types && yarn build-src",
-    "release": "yarn clean && yarn quality && yarn build"
-  },
+  "name": "@jsr/whekin__divorcepath-template-x",
+  "version": "4.1.6",
+  "homepage": "https://jsr.io/@whekin/divorcepath-template-x",
+  "type": "module",
   "dependencies": {
-    "@xmldom/xmldom": "0.8.7",
-    "jszip": "3.10.1",
-    "lodash.get": "4.4.2"
+    "@xmldom/xmldom": "0.8.10",
+    "json5": "2.2.3",
+    "lodash.get": "4.4.2",
+    "pizzip": "^3.1.7"
   },
-  "devDependencies": {
-    "@babel/core": "7.18.6",
-    "@babel/plugin-proposal-class-properties": "7.18.6",
-    "@babel/plugin-proposal-nullish-coalescing-operator": "7.18.6",
-    "@babel/plugin-proposal-object-rest-spread": "7.18.6",
-    "@babel/plugin-proposal-optional-catch-binding": "7.18.6",
-    "@babel/plugin-proposal-optional-chaining": "7.18.6",
-    "@babel/plugin-transform-modules-commonjs": "7.18.6",
-    "@babel/preset-typescript": "7.18.6",
-    "@rollup/plugin-replace": "4.0.0",
-    "@types/jest": "28.1.4",
-    "@types/jszip": "3.4.1",
-    "@types/node": "18.0.1",
-    "@types/ts-nameof": "4.2.1",
-    "@typescript-eslint/eslint-plugin": "5.30.4",
-    "@typescript-eslint/parser": "5.30.4",
-    "babel-jest": "28.1.2",
-    "babel-loader": "8.2.5",
-    "babel-plugin-ts-nameof": "4.2.1",
-    "eslint": "8.19.0",
-    "jest": "28.1.2",
-    "jest-junit": "14.0.0",
-    "lorem-ipsum": "2.0.8",
-    "rimraf": "3.0.2",
-    "rollup": "2.75.7",
-    "rollup-plugin-auto-external": "2.0.0",
-    "rollup-plugin-babel": "4.4.0",
-    "rollup-plugin-node-resolve": "5.2.0",
-    "typescript": "4.7.4"
-  }
+  "exports": {
+    ".": {
+      "default": "./src/index.js"
+    }
+  },
+  "_jsr_revision": 11
 }

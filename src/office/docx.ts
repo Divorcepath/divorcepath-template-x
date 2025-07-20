@@ -1,13 +1,13 @@
-import { MalformedFileError } from '../errors';
-import { Constructor, IMap } from '../types';
-import { Binary, last } from '../utils';
-import { XmlGeneralNode, XmlNodeType, XmlParser } from '../xml';
-import { Zip } from '../zip';
-import { ContentPartType } from './contentPartType';
-import { ContentTypesFile } from './contentTypesFile';
-import { MediaFiles } from './mediaFiles';
-import { Rels } from './rels';
-import { XmlPart } from './xmlPart';
+import { MalformedFileError } from '../errors/index.js';
+import { Constructor, IMap } from '../types.js';
+import { Binary, last } from '../utils/index.js';
+import { XmlGeneralNode, XmlNode, XmlNodeType, XmlParser } from '../xml/index.js';
+import { Zip } from '../zip/index.js';
+import { ContentPartType } from './contentPartType.js';
+import { ContentTypesFile } from './contentTypesFile.js';
+import { MediaFiles } from './mediaFiles.js';
+import { Rels } from './rels.js';
+import { XmlPart } from './xmlPart.js';
 
 /**
  * Represents a single docx file.
@@ -71,10 +71,10 @@ export class Docx {
     // public methods
     //
 
-    public async getContentPart(type: ContentPartType): Promise<XmlPart> {
+    public async getContentPart(type: ContentPartType): Promise<XmlPart[]> {
         switch (type) {
             case ContentPartType.MainDocument:
-                return this.mainDocument;
+                return [this.mainDocument];
             default:
                 return await this.getHeaderOrFooter(type);
         }
@@ -93,7 +93,7 @@ export class Docx {
             ContentPartType.FirstFooter,
             ContentPartType.EvenPagesFooter
         ];
-        const parts = await Promise.all(partTypes.map(p => this.getContentPart(p)));
+        const parts = (await Promise.all(partTypes.map(p => this.getContentPart(p)))).flat();
         return parts.filter(p => !!p);
     }
 
@@ -106,37 +106,76 @@ export class Docx {
     // private methods
     //
 
-    private async getHeaderOrFooter(type: ContentPartType): Promise<XmlPart> {
-
+    private async getHeaderOrFooter(type: ContentPartType): Promise<XmlPart[]> {
         const nodeName = this.headerFooterNodeName(type);
         const nodeTypeAttribute = this.headerFooterType(type);
 
-        // find the last section properties
-        // see: http://officeopenxml.com/WPsection.php
         const docRoot = await this.mainDocument.xmlRoot();
-        const body = docRoot.childNodes[0];
-        const sectionProps = last(body.childNodes.filter(node => node.nodeType === XmlNodeType.General));
-        if (sectionProps.nodeName != 'w:sectPr')
+        const body = docRoot.childNodes.find(node => node.nodeName == 'w:body');
+        if (body == null)
             return null;
 
-        // find the header or footer reference
-        const reference = sectionProps.childNodes?.find(node => {
-            return node.nodeType === XmlNodeType.General &&
-                node.nodeName === nodeName &&
-                node.attributes?.['w:type'] === nodeTypeAttribute;
+        const sectionProps: XmlGeneralNode[] = [];
+
+        // Get section props from paragraphs
+        body.childNodes.forEach(node => {
+            if (node.nodeType === XmlNodeType.General && node.nodeName === 'w:p') {
+                const pPr = node.childNodes.find(child =>
+                    child.nodeType === XmlNodeType.General &&
+                    child.nodeName === 'w:pPr'
+                );
+                const sectPr = pPr?.childNodes.find(child =>
+                    child.nodeType === XmlNodeType.General &&
+                    child.nodeName === 'w:sectPr'
+                );
+                if (sectPr) {
+                    sectionProps.push(sectPr as XmlGeneralNode);
+                }
+            }
         });
-        const relId = (reference as XmlGeneralNode)?.attributes?.['r:id'];
-        if (!relId)
-            return null;
 
-        // return the XmlPart
-        const rels = await this.mainDocument.rels.list();
-        const relTarget = rels.find(r => r.id === relId).target;
-        if (!this._parts[relTarget]) {
-            const part = new XmlPart("word/" + relTarget, this.zip, this.xmlParser);
-            this._parts[relTarget] = part;
+        // Get document level section props
+        const docSectPr = last(body.childNodes.filter(node =>
+            node.nodeType === XmlNodeType.General &&
+            node.nodeName === 'w:sectPr'
+        ));
+        if (docSectPr) {
+            sectionProps.push(docSectPr as XmlGeneralNode);
         }
-        return this._parts[relTarget];
+
+        // Find all header/footer references in section props
+        const references = sectionProps.flatMap(sectPr =>
+            sectPr.childNodes?.filter(node =>
+                node.nodeType === XmlNodeType.General &&
+                node.nodeName === nodeName &&
+                node.attributes?.['w:type'] === nodeTypeAttribute
+            ) || []
+        );
+
+        if (references.length === 0) return null;
+
+        // Get or create XmlPart for each header/footer
+        const rels = await this.mainDocument.rels.list();
+        const parts: XmlPart[] = [];
+
+        for (const reference of references) {
+            const relId = (reference as XmlGeneralNode)?.attributes?.['r:id'];
+            if (!relId) continue;
+
+            const relTarget = rels.find(r => r.id === relId)?.target;
+            if (!relTarget) continue;
+
+            if (!this._parts[relTarget]) {
+                this._parts[relTarget] = new XmlPart(
+                    "word/" + relTarget,
+                    this.zip,
+                    this.xmlParser
+                );
+            }
+            parts.push(this._parts[relTarget]);
+        }
+
+        return parts;
     }
 
     private headerFooterNodeName(contentPartType: ContentPartType): string {

@@ -1,6 +1,6 @@
-import { XmlGeneralNode, XmlNode, XmlParser, XmlTextNode } from '../xml';
-import { Zip } from '../zip';
-import { Docx } from './docx';
+import { XmlGeneralNode, XmlNode, XmlParser, XmlTextNode } from '../xml/index.js';
+import { Zip } from '../zip/index.js';
+import { Docx } from './docx.js';
 
 export class DocxParser {
 
@@ -187,8 +187,23 @@ export class DocxParser {
         const secondRunNode = this.containingRunNode(to);
 
         const paragraphNode = firstRunNode.parentNode;
-        if (secondRunNode.parentNode !== paragraphNode)
-            throw new Error('Can not join text nodes from separate paragraphs.');
+
+        // If nodes are in different paragraphs, collect all text in first paragraph before throwing
+        if (secondRunNode.parentNode !== paragraphNode) {
+            const textInFirstParagraph: string[] = [];
+            let currentRun = firstRunNode;
+
+            while (currentRun && currentRun.parentNode === paragraphNode) {
+                const textNode = this.firstTextNodeChild(currentRun);
+                if (textNode) {
+                    const xmlTextNode = XmlNode.lastTextChild(textNode);
+                    textInFirstParagraph.push(xmlTextNode.textContent);
+                }
+                currentRun = currentRun.nextSibling;
+            }
+
+            throw new Error(`Can not join text nodes from separate paragraphs. Start position: ${textInFirstParagraph.join('')}`);
+        }
 
         // find "word text nodes"
         const firstWordTextNode = this.containingTextNode(from);
@@ -208,8 +223,10 @@ export class DocxParser {
             }
             while (curWordTextNode) {
 
-                if (curWordTextNode.nodeName !== DocxParser.TEXT_NODE)
+                if (curWordTextNode.nodeName !== DocxParser.TEXT_NODE) {
+                    curWordTextNode = curWordTextNode.nextSibling;
                     continue;
+                }
 
                 // move text to first node
                 const curXmlTextNode = XmlNode.lastTextChild(curWordTextNode);

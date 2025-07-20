@@ -1,9 +1,9 @@
-import { PathPart, ScopeData, Tag, TemplateContext } from '../../compilation';
-import { TemplateData } from '../../templateData';
-import { last } from '../../utils';
-import { XmlNode } from '../../xml';
-import { PluginUtilities, TemplatePlugin } from '../templatePlugin';
-import { ILoopStrategy, LoopListStrategy, LoopParagraphStrategy } from './strategy';
+import { PathPart, ScopeData, Tag, TemplateContext } from '../../compilation/index.js';
+import { TemplateData } from '../../templateData.js';
+import { last } from '../../utils/index.js';
+import { XmlNode } from '../../xml/index.js';
+import { PluginUtilities, TemplatePlugin } from '../templatePlugin.js';
+import { ILoopStrategy, LoopListStrategy, LoopParagraphStrategy } from './strategy/index.js';
 
 export const LOOP_CONTENT_TYPE = 'loop';
 
@@ -22,12 +22,17 @@ export class LoopPlugin extends TemplatePlugin {
     }
 
     public async containerTagReplacements(tags: Tag[], data: ScopeData, context: TemplateContext): Promise<void> {
+
         let value = data.getScopeData<TemplateData[]>();
 
         // Non array value - treat as a boolean condition.
         const isCondition = !Array.isArray(value);
         if (isCondition) {
-            value = !!value ? [{}] : [];
+            if (value) {
+                value = [{}];
+            } else {
+                value = [];
+            }
         }
 
         // vars
@@ -46,6 +51,9 @@ export class LoopPlugin extends TemplatePlugin {
         const repeatedNodes = this.repeat(nodesToRepeat, value.length);
 
         // recursive compilation
+        // (this step can be optimized in the future if we'll keep track of the
+        // path to each token and use that to create new tokens instead of
+        // search through the text again)
         const compiledNodes = await this.compile(isCondition, repeatedNodes, data, context);
 
         // merge back to the document

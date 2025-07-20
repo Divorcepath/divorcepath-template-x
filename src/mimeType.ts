@@ -1,4 +1,4 @@
-import { UnsupportedFileTypeError } from './errors';
+import { UnsupportedFileTypeError } from './errors/index.js';
 
 export enum MimeType {
     Png = 'image/png',

@@ -1,4 +1,4 @@
-import { PluginContent } from './plugins';
+import { PluginContent } from './plugins/index.js';
 
 export type PrimitiveTemplateContent = string | number | boolean;
 

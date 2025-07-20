@@ -1,2 +1,2 @@
-export * from './extensionOptions';
-export * from './templateExtension';
+export * from './extensionOptions.js';
+export * from './templateExtension.js';

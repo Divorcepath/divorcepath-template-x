@@ -1,7 +1,7 @@
-import { MimeType, MimeTypeHelper } from '../mimeType';
-import { IMap } from '../types';
-import { XmlGeneralNode, XmlNode, XmlParser } from '../xml';
-import { Zip } from '../zip';
+import { MimeType, MimeTypeHelper } from '../mimeType.js';
+import { IMap } from '../types.js';
+import { XmlGeneralNode, XmlNode, XmlParser } from '../xml/index.js';
+import { Zip } from '../zip/index.js';
 
 /**
  * http://officeopenxml.com/anatomyofOOXML.php

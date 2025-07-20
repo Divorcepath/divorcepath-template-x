@@ -1,5 +1,44 @@
 # Change Log
 
+## [4.1.1 - 2024-08-12](https://github.com/alonrbar/easy-template-x/tree/v4.1.1)
+
+### Fixed
+
+- Fix importing the package without a bundler ([#120](https://github.com/alonrbar/easy-template-x/issues/120)).
+
+## [4.1.0 - 2024-07-17](https://github.com/alonrbar/easy-template-x/tree/v4.1.0)
+
+### Added
+
+- Image transparency support ([#109](https://github.com/alonrbar/easy-template-x/issues/109)).
+
+## [4.0.0 - 2024-07-07](https://github.com/alonrbar/easy-template-x/tree/v4.0.0)
+
+This version introduces the notion of "tag options". These options are controlled through the template and are useful for situations where we want to allow the template author to use the same data in different ways. For instance, if we have a collection in the data and we want to allow the template author to use this collection inside a table to either produce _multiple rows_ **or** in order to expand the collection inside a _single table cell_. In this case, the template author will be able to specify either `{# my collection [loopOver: "row"]}` or `{# my collection [loopOver: "content"]}` to control the resulting outcome.
+
+## Added
+
+- **BREAKING** - Introduce "tag options" syntax: `{tag name [options]}`. E.g. `{# Students [loopOver: "rows"]}`.
+  - This may break existing templates that use brackets as part of their tag names.
+  - If you still need to use brackets in the tag name (for instance if you are using an  [advanced syntax](https://github.com/alonrbar/easy-template-x?tab=readme-ov-file#advanced-syntax-and-custom-resolvers) and access an array element by index), you can change the tag options delimiters through the [TemplateHandler options](https://github.com/alonrbar/easy-template-x?tab=readme-ov-file#template-handler-options) (e.g. use `[[ options ]]` instead of `[ options ]`).
+- `loopOver` tag option, to control loop behavior in tables, as explained above.
+
+## Changed
+
+- **BREAKING** - A loop inside a single table cell is assumed to be a paragraph loop, not a table loop (will repeat content, not rows; should fix [#50](https://github.com/alonrbar/easy-template-x/issues/50), [#52](https://github.com/alonrbar/easy-template-x/issues/52), [#56](https://github.com/alonrbar/easy-template-x/issues/56), [#85](https://github.com/alonrbar/easy-template-x/issues/85), [#92](https://github.com/alonrbar/easy-template-x/issues/92) and [#110](https://github.com/alonrbar/easy-template-x/issues/110)). The default behavior can be overridden by using the new `loopOver` option.
+
+## [3.2.1 - 2024-05-25](https://github.com/alonrbar/easy-template-x/tree/v3.2.1)
+
+### Fixed
+
+- Properly handle XML comments in template doc ([#113](https://github.com/alonrbar/easy-template-x/pull/113)).
+
+## [3.2.0 - 2023-05-27](https://github.com/alonrbar/easy-template-x/tree/v3.2.0)
+
+### Added
+
+- Link tooltip support ([#91](https://github.com/alonrbar/easy-template-x/pull/91)).
+
 ## [3.1.0 - 2023-04-01](https://github.com/alonrbar/easy-template-x/tree/v3.1.0)
 
 ### Added

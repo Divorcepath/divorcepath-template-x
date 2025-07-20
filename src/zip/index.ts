@@ -1,2 +1,2 @@
-export * from './zip';
-export * from './zipObject';
+export * from './zip.js';
+export * from './zipObject.js';

@@ -1,4 +1,4 @@
-import { IMap } from '../types';
+import { IMap } from '../types.js';
 
 export type ItemMapper<TIn, TOut = string> = (item: TIn, index: number) => TOut;
 

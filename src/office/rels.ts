@@ -1,8 +1,8 @@
-import { IMap } from '../types';
-import { Path } from '../utils';
-import { XmlGeneralNode, XmlNode, XmlParser } from '../xml';
-import { Zip } from '../zip';
-import { Relationship, RelTargetMode } from './relationship';
+import { IMap } from '../types.js';
+import { Path } from '../utils/index.js';
+import { XmlGeneralNode, XmlNode, XmlParser } from '../xml/index.js';
+import { Zip } from '../zip/index.js';
+import { Relationship, RelTargetMode } from './relationship.js';
 
 /**
  * Handles the relationship logic of a single docx "part".

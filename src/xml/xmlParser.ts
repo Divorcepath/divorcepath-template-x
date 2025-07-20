@@ -1,6 +1,6 @@
 import { DOMParser } from '@xmldom/xmldom';
-import { MissingArgumentError } from '../errors';
-import { XmlNode } from './xmlNode';
+import { MissingArgumentError } from '../errors/index.js';
+import { XmlNode } from './xmlNode.js';
 
 export class XmlParser {
 

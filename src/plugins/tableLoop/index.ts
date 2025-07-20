@@ -1,1 +1,1 @@
-export * from './tableLoopPlugin';
+export * from './tableLoopPlugin.js';

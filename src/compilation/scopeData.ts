@@ -1,7 +1,7 @@
 import getProp from 'lodash.get';
-import { TemplateContent, TemplateData } from '../templateData';
-import { isNumber, last } from '../utils';
-import { Tag } from './tag';
+import { TemplateContent, TemplateData } from '../templateData.js';
+import { isNumber, last } from '../utils/index.js';
+import { Tag } from './tag.js';
 
 export type PathPart = Tag | number;
 

@@ -1,4 +1,4 @@
-import { PluginContent } from '../pluginContent';
+import { PluginContent } from '../pluginContent.js';
 
 export interface LinkContent extends PluginContent {
     _type: 'link';
@@ -7,4 +7,5 @@ export interface LinkContent extends PluginContent {
      */
     text?: string;
     target: string;
+    tooltip?: string;
 }

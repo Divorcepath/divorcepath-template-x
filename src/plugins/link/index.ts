@@ -1,2 +1,2 @@
-export * from './linkContent';
-export * from './linkPlugin';
+export * from './linkContent.js';
+export * from './linkPlugin.js';

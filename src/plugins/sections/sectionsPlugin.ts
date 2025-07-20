@@ -1,85 +1,53 @@
-import { PathPart, ScopeData, Tag, TemplateContext } from "../../compilation";
-// import { TemplateData } from '../../templateData';
-import { last } from "../../utils";
-import { XmlNode } from "../../xml";
-import { PluginUtilities, TemplatePlugin } from "../templatePlugin";
-import { SectionContent } from "./sectionContent";
-import {
-    ILoopStrategy,
-    LoopListStrategy,
-    LoopParagraphStrategy,
-} from "./strategy";
+import type { PathPart, ScopeData, Tag, TemplateContext } from '../../compilation/index.ts';
+import { last } from '../../utils/index.js';
+import { XmlNode } from '../../xml/index.js';
+import { type PluginUtilities, TemplatePlugin } from '../templatePlugin.js';
+import type { SectionContent } from './sectionContent.ts';
+import { type ILoopStrategy, LoopParagraphStrategy } from './strategy/index.js';
 
-export const SECTIONS_CONTENT_TYPE = "sections";
+export const SECTIONS_CONTENT_TYPE = 'sections';
 
 export class SectionsPlugin extends TemplatePlugin {
     public readonly contentType = SECTIONS_CONTENT_TYPE;
 
-    private readonly loopStrategies: ILoopStrategy[] = [
-        new LoopListStrategy(),
-        new LoopParagraphStrategy(), // the default strategy
-    ];
+    private readonly loopStrategies: ILoopStrategy[] = [new LoopParagraphStrategy()];
 
     public setUtilities(utilities: PluginUtilities): void {
         this.utilities = utilities;
-        this.loopStrategies.forEach((strategy) =>
-            strategy.setUtilities(utilities)
-        );
+        this.loopStrategies.forEach(strategy => strategy.setUtilities(utilities));
     }
 
-    public async containerTagReplacements(
-        tags: Tag[],
-        data: ScopeData,
-        context: TemplateContext
-    ): Promise<void> {
+    public async containerTagReplacements(tags: Tag[], data: ScopeData, context: TemplateContext): Promise<void> {
         const value = data.getScopeData<SectionContent>();
 
-        const section = value?.section;
+        const { section } = value;
+        const { hideMode = 'hidable', hidden = false} = section;
 
-        // Non array value - treat as a boolean condition.
-        // const isCondition = !Array.isArray(value);
-        // if (isCondition) {
-        //     if (!!value) {
-        //         value = [{}];
-        //     } else {
-        //         value = [];
-        //     }
-        // }
-
-        // vars
         const openTag = tags[0];
         const closeTag = last(tags);
 
-        // select the suitable strategy
-        // const loopStrategy = this.loopStrategies.find((strategy) =>
-        //     strategy.isApplicable(openTag, closeTag)
-        // );
-        // if (!loopStrategy)
-        //     throw new Error(
-        //         `No loop strategy found for tag '${openTag.rawText}'.`
-        //     );
-        const loopStrategy = this.loopStrategies[1];
+        const [loopStrategy] = this.loopStrategies;
 
         // prepare to loop
-        const { firstNode, nodesToRepeat, lastNode } = loopStrategy.splitBefore(
-            openTag,
-            closeTag
-        );
+        const { firstNode, nodesToRepeat, lastNode } = loopStrategy.splitBefore(openTag, closeTag);
 
         // repeat (loop) the content
         // const repeatedNodes = this.repeat(nodesToRepeat, value.length);
-        const repeatedNodes = this.repeat(nodesToRepeat, +(section.include ?? 1));
+        // In case of not precedents section it should be repeated, not ejected from the document
+
+        const getRepeadedNodes = () => {
+            if (hideMode === "hidable") return 1;
+
+            return hidden ? 0 : 1;
+        };
+
+        const repeatedNodes = this.repeat(nodesToRepeat, getRepeadedNodes());
 
         // recursive compilation
         // (this step can be optimized in the future if we'll keep track of the
         // path to each token and use that to create new tokens instead of
         // search through the text again)
-        const compiledNodes = await this.compile(
-            false,
-            repeatedNodes,
-            data,
-            context
-        );
+        const compiledNodes = await this.compile(false, repeatedNodes, data, context);
 
         // merge back to the document
         loopStrategy.mergeBack(compiledNodes, firstNode, lastNode, section);
@@ -91,9 +59,7 @@ export class SectionsPlugin extends TemplatePlugin {
         const allResults: XmlNode[][] = [];
 
         for (let i = 0; i < times; i++) {
-            const curResult = nodes.map((node) =>
-                XmlNode.cloneNode(node, true)
-            );
+            const curResult = nodes.map(node => XmlNode.cloneNode(node, true));
             allResults.push(curResult);
         }
 
@@ -112,10 +78,8 @@ export class SectionsPlugin extends TemplatePlugin {
         for (let i = 0; i < nodeGroups.length; i++) {
             // create dummy root node
             const curNodes = nodeGroups[i];
-            const dummyRootNode = XmlNode.createGeneralNode("dummyRootNode");
-            curNodes.forEach((node) =>
-                XmlNode.appendChild(dummyRootNode, node)
-            );
+            const dummyRootNode = XmlNode.createGeneralNode('dummyRootNode');
+            curNodes.forEach(node => XmlNode.appendChild(dummyRootNode, node));
 
             // compile the new root
             const conditionTag = this.updatePathBefore(isCondition, data, i);
@@ -124,10 +88,7 @@ export class SectionsPlugin extends TemplatePlugin {
 
             // disconnect from dummy root
             const curResult: XmlNode[] = [];
-            while (
-                dummyRootNode.childNodes &&
-                dummyRootNode.childNodes.length
-            ) {
+            while (dummyRootNode.childNodes?.length) {
                 const child = XmlNode.removeChild(dummyRootNode, 0);
                 curResult.push(child);
             }
@@ -137,11 +98,7 @@ export class SectionsPlugin extends TemplatePlugin {
         return compiledNodeGroups;
     }
 
-    private updatePathBefore(
-        isCondition: boolean,
-        data: ScopeData,
-        groupIndex: number
-    ): PathPart {
+    private updatePathBefore(isCondition: boolean, data: ScopeData, groupIndex: number): PathPart {
         // if it's a condition - don't go deeper in the path
         // (so we need to extract the already pushed condition tag)
         if (isCondition) {
@@ -159,11 +116,7 @@ export class SectionsPlugin extends TemplatePlugin {
         return null;
     }
 
-    private updatePathAfter(
-        isCondition: boolean,
-        data: ScopeData,
-        conditionTag: PathPart
-    ): void {
+    private updatePathAfter(isCondition: boolean, data: ScopeData, conditionTag: PathPart): void {
         // reverse the "before" path operation
         if (isCondition) {
             data.pathPush(conditionTag);

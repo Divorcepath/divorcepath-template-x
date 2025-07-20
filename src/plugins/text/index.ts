@@ -1,1 +1,1 @@
-export * from './textPlugin';
+export * from './textPlugin.js';

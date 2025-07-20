@@ -1,8 +1,8 @@
-import { ScopeData, Tag, TemplateContext } from '../../compilation';
-import { DocxParser } from '../../office';
-import { XmlNode } from '../../xml';
-import { TemplatePlugin } from '../templatePlugin';
-import { LinkContent } from './linkContent';
+import { ScopeData, Tag, TemplateContext } from '../../compilation/index.js';
+import { DocxParser } from '../../office/index.js';
+import { XmlNode } from '../../xml/index.js';
+import { TemplatePlugin } from '../templatePlugin.js';
+import { LinkContent } from './linkContent.js';
 
 export class LinkPlugin extends TemplatePlugin {
 
@@ -35,9 +35,17 @@ export class LinkPlugin extends TemplatePlugin {
 
         // http://officeopenxml.com/WPhyperlink.php
 
+        let tooltip = '';
+        if (content.tooltip) {
+            tooltip += `w:tooltip="${content.tooltip}" `;
+        }
+
         const markupText = `
-            <w:hyperlink r:id="${relId}" w:history="1">
+            <w:hyperlink r:id="${relId}" ${tooltip}w:history="1">
                 <w:r>
+                    <w:rPr>
+                        <w:rStyle w:val="Hyperlink"/>
+                    </w:rPr>
                     <w:t>${content.text || content.target}</w:t>
                 </w:r>
             </w:hyperlink>

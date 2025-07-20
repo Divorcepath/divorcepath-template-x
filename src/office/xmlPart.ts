@@ -1,6 +1,6 @@
-import { XmlNode, XmlParser } from '../xml';
-import { Zip } from '../zip';
-import { Rels } from './rels';
+import { XmlNode, XmlParser } from '../xml/index.js';
+import { Zip } from '../zip/index.js';
+import { Rels } from './rels.js';
 
 /**
  * Represents an xml file that is part of an OPC package.

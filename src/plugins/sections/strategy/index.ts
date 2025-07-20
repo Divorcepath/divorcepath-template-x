@@ -1,3 +1,2 @@
-export * from './iLoopStrategy';
-export * from './loopListStrategy';
-export * from './loopParagraphStrategy';
+export * from './iLoopStrategy.js';
+export * from './loopParagraphStrategy.js';

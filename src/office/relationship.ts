@@ -1,4 +1,4 @@
-import { XmlGeneralNode, XmlNode } from '../xml';
+import { XmlGeneralNode, XmlNode } from '../xml/index.js';
 
 export type RelTargetMode = 'Internal' | 'External';
 

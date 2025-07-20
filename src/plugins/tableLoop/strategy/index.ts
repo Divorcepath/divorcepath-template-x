@@ -1,2 +1,2 @@
-export * from './iLoopStrategy';
-export * from './loopTableStrategy';
+export * from './iLoopStrategy.js';
+export * from './loopTableStrategy.js';

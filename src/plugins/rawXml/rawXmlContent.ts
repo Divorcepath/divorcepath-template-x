@@ -1,4 +1,4 @@
-import { PluginContent } from '../pluginContent';
+import { PluginContent } from '../pluginContent.js';
 
 export interface RawXmlContent extends PluginContent {
     _type: 'rawXml';

@@ -1,7 +1,7 @@
-import { PluginContent } from "../pluginContent";
+import type { PluginContent } from "../pluginContent.ts";
 
-import { Section } from "./strategy";
+import type { Section } from "./strategy/index.ts";
 
 export interface SectionContent extends PluginContent {
-    section: Section
+    section: Section;
 }

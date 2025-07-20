@@ -1,13 +1,14 @@
-import { MissingArgumentError } from '../errors';
-import { IMap } from '../types';
-import { last } from '../utils';
+import { MissingArgumentError } from '../errors/index.js';
+import { IMap } from '../types.js';
+import { last } from '../utils/index.js';
 
 export enum XmlNodeType {
-    Text = "Text",
-    General = "General"
+    Text = 'Text',
+    General = 'General',
+    Comment = 'Comment'
 }
 
-export type XmlNode = XmlTextNode | XmlGeneralNode;
+export type XmlNode = XmlTextNode | XmlGeneralNode | XmlCommentNode;
 
 export interface XmlNodeBase {
     nodeType: XmlNodeType;
@@ -18,11 +19,18 @@ export interface XmlNodeBase {
 }
 
 export const TEXT_NODE_NAME = '#text'; // see: https://developer.mozilla.org/en-US/docs/Web/API/Node/nodeName
+export const COMMENT_NODE_NAME = '#comment';
 
 export interface XmlTextNode extends XmlNodeBase {
     nodeType: XmlNodeType.Text;
     nodeName: typeof TEXT_NODE_NAME;
     textContent: string;
+}
+
+export interface XmlCommentNode extends XmlNodeBase {
+    nodeType: XmlNodeType.Comment;
+    nodeName: typeof COMMENT_NODE_NAME;
+    commentContent: string;
 }
 
 export interface XmlGeneralNode extends XmlNodeBase {
@@ -31,7 +39,6 @@ export interface XmlGeneralNode extends XmlNodeBase {
 }
 
 export const XmlNode = {
-
     //
     // factories
     //
@@ -51,6 +58,14 @@ export const XmlNode = {
         };
     },
 
+    createCommentNode(text?: string): XmlCommentNode {
+        return {
+            nodeType: XmlNodeType.Comment,
+            nodeName: COMMENT_NODE_NAME,
+            commentContent: text
+        };
+    },
+
     //
     // serialization
     //
@@ -61,35 +76,41 @@ export const XmlNode = {
      * https://stackoverflow.com/questions/7918868/how-to-escape-xml-entities-in-javascript
      */
     encodeValue(str: string): string {
-        if (str === null || str === undefined)
-            throw new MissingArgumentError(nameof(str));
-        if (typeof str !== 'string')
-            throw new TypeError(`Expected a string, got '${(str as any).constructor.name}'.`);
+        if (str === null || str === undefined) throw new MissingArgumentError(nameof(str));
+        if (typeof str !== 'string') throw new TypeError(`Expected a string, got '${(str as any).constructor.name}'.`);
 
         return str.replace(/[<>&'"]/g, c => {
             switch (c) {
-                case '<': return '&lt;';
-                case '>': return '&gt;';
-                case '&': return '&amp;';
-                case '\'': return '&apos;';
-                case '"': return '&quot;';
+                case '<':
+                    return '&lt;';
+                case '>':
+                    return '&gt;';
+                case '&':
+                    return '&amp;';
+                case "'":
+                    return '&apos;';
+                case '"':
+                    return '&quot;';
             }
             return '';
         });
     },
 
     serialize(node: XmlNode): string {
-        if (this.isTextNode(node))
-            return this.encodeValue(node.textContent || '');
+        if (this.isTextNode(node)) return this.encodeValue(node.textContent || '');
+
+        if (this.isCommentNode(node)) {
+            return `<!-- ${this.encodeValue(node.commentContent || '')} -->`;
+        }
 
         // attributes
         let attributes = '';
         if (node.attributes) {
             const attributeNames = Object.keys(node.attributes);
             if (attributeNames.length) {
-                attributes = ' ' + attributeNames
-                    .map(name => `${name}="${this.encodeValue(node.attributes[name] || '')}"`)
-                    .join(' ');
+                attributes =
+                    ' ' +
+                    attributeNames.map(name => `${name}="${this.encodeValue(node.attributes[name] || '')}"`).join(' ');
             }
         }
 
@@ -101,11 +122,8 @@ export const XmlNode = {
         let xml: string;
 
         if (hasChildren) {
-
             // child nodes
-            const childrenXml = node.childNodes
-                .map(child => this.serialize(child))
-                .join('');
+            const childrenXml = node.childNodes.map(child => this.serialize(child)).join('');
 
             // close tag
             const closeTag = `</${node.nodeName}>`;
@@ -125,24 +143,30 @@ export const XmlNode = {
         let xmlNode: XmlNode;
 
         // basic properties
-        if (domNode.nodeType === domNode.TEXT_NODE) {
-
-            xmlNode = this.createTextNode(domNode.textContent);
-
-        } else {
-
-            xmlNode = this.createGeneralNode(domNode.nodeName);
-
-            // attributes
-            if (domNode.nodeType === domNode.ELEMENT_NODE) {
+        switch (domNode.nodeType) {
+            case domNode.TEXT_NODE: {
+                xmlNode = this.createTextNode(domNode.textContent);
+                break;
+            }
+            case domNode.COMMENT_NODE: {
+                xmlNode = this.createCommentNode(domNode.textContent?.trim());
+                break;
+            }
+            case domNode.ELEMENT_NODE: {
+                const generalNode = (xmlNode = this.createGeneralNode(domNode.nodeName));
                 const attributes = (domNode as Element).attributes;
                 if (attributes) {
-                    (xmlNode as XmlGeneralNode).attributes = {};
+                    generalNode.attributes = {};
                     for (let i = 0; i < attributes.length; i++) {
                         const curAttribute = attributes.item(i);
-                        (xmlNode as XmlGeneralNode).attributes[curAttribute.name] = curAttribute.value;
+                        generalNode.attributes[curAttribute.name] = curAttribute.value;
                     }
                 }
+                break;
+            }
+            default: {
+                xmlNode = this.createGeneralNode(domNode.nodeName);
+                break;
             }
         }
 
@@ -151,7 +175,6 @@ export const XmlNode = {
             xmlNode.childNodes = [];
             let prevChild: XmlNode;
             for (let i = 0; i < domNode.childNodes.length; i++) {
-
                 // clone child
                 const domChild = domNode.childNodes.item(i);
                 const curChild = this.fromDomNode(domChild);
@@ -183,14 +206,23 @@ export const XmlNode = {
         return false;
     },
 
+    isCommentNode(node: XmlNode): node is XmlCommentNode {
+        if (node.nodeType === XmlNodeType.Comment || node.nodeName === COMMENT_NODE_NAME) {
+            if (!(node.nodeType === XmlNodeType.Comment && node.nodeName === COMMENT_NODE_NAME)) {
+                throw new Error(`Invalid comment node. Type: '${node.nodeType}', Name: '${node.nodeName}'.`);
+            }
+            return true;
+        }
+        return false;
+    },
+
     cloneNode<T extends XmlNode>(node: T, deep: boolean): T {
-        if (!node)
-            throw new MissingArgumentError(nameof(node));
+        if (!node) throw new MissingArgumentError(nameof(node));
 
         if (!deep) {
             const clone = Object.assign({}, node);
             clone.parentNode = null;
-            clone.childNodes = (node.childNodes ? [] : null);
+            clone.childNodes = node.childNodes ? [] : null;
             clone.nextSibling = null;
             return clone;
         } else {
@@ -207,13 +239,10 @@ export const XmlNode = {
      *   already know the relevant index.
      */
     insertBefore(newNode: XmlNode, referenceNode: XmlNode): void {
-        if (!newNode)
-            throw new MissingArgumentError(nameof(newNode));
-        if (!referenceNode)
-            throw new MissingArgumentError(nameof(referenceNode));
+        if (!newNode) throw new MissingArgumentError(nameof(newNode));
+        if (!referenceNode) throw new MissingArgumentError(nameof(referenceNode));
 
-        if (!referenceNode.parentNode)
-            throw new Error(`'${nameof(referenceNode)}' has no parent`);
+        if (!referenceNode.parentNode) throw new Error(`'${nameof(referenceNode)}' has no parent`);
 
         const childNodes = referenceNode.parentNode.childNodes;
         const beforeNodeIndex = childNodes.indexOf(referenceNode);
@@ -227,13 +256,10 @@ export const XmlNode = {
      *   already know the relevant index.
      */
     insertAfter(newNode: XmlNode, referenceNode: XmlNode): void {
-        if (!newNode)
-            throw new MissingArgumentError(nameof(newNode));
-        if (!referenceNode)
-            throw new MissingArgumentError(nameof(referenceNode));
+        if (!newNode) throw new MissingArgumentError(nameof(newNode));
+        if (!referenceNode) throw new MissingArgumentError(nameof(referenceNode));
 
-        if (!referenceNode.parentNode)
-            throw new Error(`'${nameof(referenceNode)}' has no parent`);
+        if (!referenceNode.parentNode) throw new Error(`'${nameof(referenceNode)}' has no parent`);
 
         const childNodes = referenceNode.parentNode.childNodes;
         const referenceNodeIndex = childNodes.indexOf(referenceNode);
@@ -241,15 +267,11 @@ export const XmlNode = {
     },
 
     insertChild(parent: XmlNode, child: XmlNode, childIndex: number): void {
-        if (!parent)
-            throw new MissingArgumentError(nameof(parent));
-        if (XmlNode.isTextNode(parent))
-            throw new Error('Appending children to text nodes is forbidden');
-        if (!child)
-            throw new MissingArgumentError(nameof(child));
+        if (!parent) throw new MissingArgumentError(nameof(parent));
+        if (XmlNode.isTextNode(parent)) throw new Error('Appending children to text nodes is forbidden');
+        if (!child) throw new MissingArgumentError(nameof(child));
 
-        if (!parent.childNodes)
-            parent.childNodes = [];
+        if (!parent.childNodes) parent.childNodes = [];
 
         // revert to append
         if (childIndex === parent.childNodes.length) {
@@ -258,7 +280,9 @@ export const XmlNode = {
         }
 
         if (childIndex > parent.childNodes.length)
-            throw new RangeError(`Child index ${childIndex} is out of range. Parent has only ${parent.childNodes.length} child nodes.`);
+            throw new RangeError(
+                `Child index ${childIndex} is out of range. Parent has only ${parent.childNodes.length} child nodes.`
+            );
 
         // update references
         child.parentNode = parent;
@@ -276,15 +300,11 @@ export const XmlNode = {
     },
 
     appendChild(parent: XmlNode, child: XmlNode): void {
-        if (!parent)
-            throw new MissingArgumentError(nameof(parent));
-        if (XmlNode.isTextNode(parent))
-            throw new Error('Appending children to text nodes is forbidden');
-        if (!child)
-            throw new MissingArgumentError(nameof(child));
+        if (!parent) throw new MissingArgumentError(nameof(parent));
+        if (XmlNode.isTextNode(parent)) throw new Error('Appending children to text nodes is forbidden');
+        if (!child) throw new MissingArgumentError(nameof(child));
 
-        if (!parent.childNodes)
-            parent.childNodes = [];
+        if (!parent.childNodes) parent.childNodes = [];
 
         // update references
         if (parent.childNodes.length) {
@@ -304,11 +324,9 @@ export const XmlNode = {
      * * **Note**: It is more efficient to call removeChild(parent, childIndex).
      */
     remove(node: XmlNode): void {
-        if (!node)
-            throw new MissingArgumentError(nameof(node));
+        if (!node) throw new MissingArgumentError(nameof(node));
 
-        if (!node.parentNode)
-            throw new Error('Node has no parent');
+        if (!node.parentNode) throw new Error('Node has no parent');
 
         removeChild(node.parentNode, node);
     },
@@ -337,8 +355,7 @@ export const XmlNode = {
             const allTextNodes = node.childNodes.filter(child => XmlNode.isTextNode(child)) as XmlTextNode[];
             if (allTextNodes.length) {
                 const lastTextNode = last(allTextNodes);
-                if (!lastTextNode.textContent)
-                    lastTextNode.textContent = '';
+                if (!lastTextNode.textContent) lastTextNode.textContent = '';
                 return lastTextNode;
             }
         }
@@ -359,8 +376,7 @@ export const XmlNode = {
      * Return the removed nodes.
      */
     removeSiblings(from: XmlNode, to: XmlNode): XmlNode[] {
-        if (from === to)
-            return [];
+        if (from === to) return [];
 
         const removed: XmlNode[] = [];
         let lastRemoved: XmlNode;
@@ -372,8 +388,7 @@ export const XmlNode = {
             XmlNode.remove(removeMe);
             removed.push(removeMe);
 
-            if (lastRemoved)
-                lastRemoved.nextSibling = removeMe;
+            if (lastRemoved) lastRemoved.nextSibling = removeMe;
             lastRemoved = removeMe;
         }
 
@@ -391,7 +406,6 @@ export const XmlNode = {
      * `false` then the original child node is the first child of `right`.
      */
     splitByChild(parent: XmlNode, child: XmlNode, removeChild: boolean): [XmlNode, XmlNode] {
-
         if (child.parentNode != parent)
             throw new Error(`Node '${nameof(child)}' is not a direct child of '${nameof(parent)}'.`);
 
@@ -419,11 +433,8 @@ export const XmlNode = {
     },
 
     findParent(node: XmlNode, predicate: (node: XmlNode) => boolean): XmlNode {
-
         while (node) {
-
-            if (predicate(node))
-                return node;
+            if (predicate(node)) return node;
 
             node = node.parentNode;
         }
@@ -436,19 +447,31 @@ export const XmlNode = {
     },
 
     findChildByName(node: XmlNode, childName: string): XmlNode {
-        if (!node)
-            return null;
+        if (!node) return null;
         return (node.childNodes || []).find(child => child.nodeName === childName);
+    },
+
+    findChildrenByName(node: XmlNode, childName: string): XmlNode[] {
+        if (!node) return null;
+        return (node.childNodes || []).filter(child => child.nodeName === childName);
+    },
+
+    findChildrenByNameDeep(node: XmlNode, childName: string): XmlNode[] {
+        if (!node) return null;
+
+        const found = this.findChildrenByName(node, childName);
+
+        const deep = (node.childNodes || []).flatMap(child => this.findChildrenByNameDeep(child, childName));
+
+        return [...found, ...deep].flatMap(n => n).filter(n => n);
     },
 
     /**
      * Returns all siblings between 'firstNode' and 'lastNode' inclusive.
      */
     siblingsInRange(firstNode: XmlNode, lastNode: XmlNode): XmlNode[] {
-        if (!firstNode)
-            throw new MissingArgumentError(nameof(firstNode));
-        if (!lastNode)
-            throw new MissingArgumentError(nameof(lastNode));
+        if (!firstNode) throw new MissingArgumentError(nameof(firstNode));
+        if (!lastNode) throw new MissingArgumentError(nameof(lastNode));
 
         const range: XmlNode[] = [];
         let curNode = firstNode;
@@ -457,8 +480,7 @@ export const XmlNode = {
             curNode = curNode.nextSibling;
         }
 
-        if (!curNode)
-            throw new Error('Nodes are not siblings.');
+        if (!curNode) throw new Error('Nodes are not siblings.');
 
         range.push(lastNode);
         return range;
@@ -469,7 +491,7 @@ export const XmlNode = {
      */
     removeEmptyTextNodes(node: XmlNode): void {
         recursiveRemoveEmptyTextNodes(node);
-    },
+    }
 };
 
 //
@@ -487,13 +509,10 @@ function removeChild(parent: XmlNode, child: XmlNode): XmlNode;
  */
 function removeChild(parent: XmlNode, childIndex: number): XmlNode;
 function removeChild(parent: XmlNode, childOrIndex: XmlNode | number): XmlNode {
-    if (!parent)
-        throw new MissingArgumentError(nameof(parent));
-    if (childOrIndex === null || childOrIndex === undefined)
-        throw new MissingArgumentError(nameof(childOrIndex));
+    if (!parent) throw new MissingArgumentError(nameof(parent));
+    if (childOrIndex === null || childOrIndex === undefined) throw new MissingArgumentError(nameof(childOrIndex));
 
-    if (!parent.childNodes || !parent.childNodes.length)
-        throw new Error('Parent node has node children');
+    if (!parent.childNodes || !parent.childNodes.length) throw new Error('Parent node has node children');
 
     // get child index
     let childIndex: number;
@@ -501,12 +520,13 @@ function removeChild(parent: XmlNode, childOrIndex: XmlNode | number): XmlNode {
         childIndex = childOrIndex;
     } else {
         childIndex = parent.childNodes.indexOf(childOrIndex);
-        if (childIndex === -1)
-            throw new Error('Specified child node is not a child of the specified parent');
+        if (childIndex === -1) throw new Error('Specified child node is not a child of the specified parent');
     }
 
     if (childIndex >= parent.childNodes.length)
-        throw new RangeError(`Child index ${childIndex} is out of range. Parent has only ${parent.childNodes.length} child nodes.`);
+        throw new RangeError(
+            `Child index ${childIndex} is out of range. Parent has only ${parent.childNodes.length} child nodes.`
+        );
 
     // update references
     const child = parent.childNodes[childIndex];
@@ -526,8 +546,7 @@ function removeChild(parent: XmlNode, childOrIndex: XmlNode | number): XmlNode {
 //
 
 function cloneNodeDeep<T extends XmlNode>(original: T): T {
-
-    const clone: XmlNode = ({} as any);
+    const clone: XmlNode = {} as any;
 
     // basic properties
     clone.nodeType = original.nodeType;
@@ -546,7 +565,6 @@ function cloneNodeDeep<T extends XmlNode>(original: T): T {
         clone.childNodes = [];
         let prevChildClone: XmlNode;
         for (const child of original.childNodes) {
-
             // clone child
             const childClone = cloneNodeDeep(child);
 
@@ -564,15 +582,12 @@ function cloneNodeDeep<T extends XmlNode>(original: T): T {
 }
 
 function recursiveRemoveEmptyTextNodes(node: XmlNode): XmlNode {
-
-    if (!node.childNodes)
-        return node;
+    if (!node.childNodes) return node;
 
     const oldChildren = node.childNodes;
     node.childNodes = [];
     for (const child of oldChildren) {
         if (XmlNode.isTextNode(child)) {
-
             // https://stackoverflow.com/questions/1921688/filtering-whitespace-only-strings-in-javascript#1921694
             if (child.textContent && child.textContent.match(/\S/)) {
                 node.childNodes.push(child);

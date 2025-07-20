@@ -1,4 +1,4 @@
-import { MaxXmlDepthError } from '../errors';
+import { MaxXmlDepthError } from '../errors/index.js';
 
 export class XmlDepthTracker {
     
