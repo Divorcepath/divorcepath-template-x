@@ -70,7 +70,14 @@ export class LoopParagraphStrategy implements ILoopStrategy {
         lastParagraph: XmlNode,
         section: Section
     ): void {
-        const { name, id, hidden = false, appearance = 'hidden', lock = false } = section;
+        const { name, id, hidden = false, appearance = 'hidden', lock = false, hideMode } = section;
+
+        // If hideMode is "excludable" and hidden is true, remove everything (no output)
+        if (hideMode === "excludable" && hidden === true) {
+            XmlNode.remove(lastParagraph);
+            XmlNode.remove(firstParagraph);
+            return;
+        }
 
         const tag = name;
 
