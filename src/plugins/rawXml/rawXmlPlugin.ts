@@ -1,3 +1,4 @@
+import { traceBeforeMutation } from '../../provenance/deliveryTrace.js';
 import { ScopeData, Tag } from '../../compilation/index.js';
 import { XmlNode } from '../../xml/index.js';
 import { TemplatePlugin } from '../templatePlugin.js';
@@ -9,6 +10,7 @@ export class RawXmlPlugin extends TemplatePlugin {
 
     public simpleTagReplacements(tag: Tag, data: ScopeData): void {
 
+        traceBeforeMutation(tag.xmlTextNode)?.owner.invalidate('deliveryScope.unsupportedRawXml');
         const value = data.getScopeData<RawXmlContent>();
 
         const replaceNode = value?.replaceParagraph ?

@@ -11,3 +11,6 @@ export * from './mimeType.js';
 export * from './templateData.js';
 export * from './templateHandler.js';
 export * from './templateHandlerOptions.js';
+
+export { DeliveryTrace, DELIVERY_TRACE_LIMITS } from './provenance/deliveryTrace.js';
+export type { DeliveryTraceResult, OriginInterval } from './provenance/deliveryTrace.js';

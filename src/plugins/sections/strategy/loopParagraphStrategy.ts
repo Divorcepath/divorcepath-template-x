@@ -1,3 +1,4 @@
+import { traceBeforeMutation, traceGeneratedTree } from '../../../provenance/deliveryTrace.js';
 import type { Tag } from '../../../compilation/index.ts';
 import { XmlNode, XmlParser } from '../../../xml/index.js';
 import type { PluginUtilities } from '../../templatePlugin.ts';
@@ -79,6 +80,7 @@ export class LoopParagraphStrategy implements ILoopStrategy {
             return;
         }
 
+        const provenanceAnchor = traceBeforeMutation(firstParagraph);
         const tag = name;
 
         const sdtTemplate = `
@@ -112,6 +114,7 @@ export class LoopParagraphStrategy implements ILoopStrategy {
         if (hidden) {
             this.vanishNode(sdtContent);
         }
+        traceGeneratedTree(sdtNode, provenanceAnchor);
     }
 
     private vanishNode(node: XmlNode): void {

@@ -1,3 +1,4 @@
+import { traceBeforeMutation, traceGeneratedTree } from '../../provenance/deliveryTrace.js';
 import { ScopeData, Tag, TemplateContext } from '../../compilation/index.js';
 import { DocxParser } from '../../office/index.js';
 import { XmlNode } from '../../xml/index.js';
@@ -28,6 +29,7 @@ export class LinkPlugin extends TemplatePlugin {
         const linkMarkup = this.generateMarkup(content, relId, wordRunNode);
 
         // add to document
+        traceGeneratedTree(linkMarkup, traceBeforeMutation(tag.xmlTextNode));
         this.insertHyperlinkNode(linkMarkup, wordRunNode, wordTextNode);
     }
 

@@ -1,3 +1,4 @@
+import { traceGeneratedText, traceBeforeMutation, traceGeneratedTree } from '../../provenance/deliveryTrace.js';
 import { ScopeData, Tag } from '../../compilation/index.js';
 import { DocxParser } from '../../office/index.js';
 import { stringValue } from '../../utils/index.js';
@@ -28,7 +29,9 @@ export class TextPlugin extends TemplatePlugin {
     private replaceSingleLine(textNode: XmlTextNode, text: string) {
 
         // set text
+        const originBefore = traceBeforeMutation(textNode);
         textNode.textContent = text;
+        traceGeneratedText(textNode, originBefore);
 
         // make sure leading and trailing whitespace are preserved
         const wordTextNode = this.utilities.docxParser.containingTextNode(textNode);
@@ -40,17 +43,21 @@ export class TextPlugin extends TemplatePlugin {
         const runNode = this.utilities.docxParser.containingRunNode(textNode);
 
         // first line
+        const originBefore = traceBeforeMutation(textNode);
         textNode.textContent = lines[0];
+        traceGeneratedText(textNode, originBefore);
 
         // other lines
         for (let i = 1; i < lines.length; i++) {
 
             // add line break
             const lineBreak = this.getLineBreak();
+            traceGeneratedTree(lineBreak, originBefore);
             XmlNode.appendChild(runNode, lineBreak);
 
             // add text
             const lineNode = this.createWordTextNode(lines[i]);
+            traceGeneratedTree(lineNode, originBefore);
             XmlNode.appendChild(runNode, lineNode);
         }
     }

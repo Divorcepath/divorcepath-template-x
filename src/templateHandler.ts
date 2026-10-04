@@ -1,3 +1,4 @@
+import type { DeliveryTrace } from './provenance/deliveryTrace.js';
 import { DelimiterSearcher, ScopeData, Tag, TagParser, TemplateCompiler, TemplateContext } from './compilation/index.js';
 import { Delimiters } from './delimiters.js';
 import { MalformedFileError } from './errors/index.js';
@@ -80,7 +81,7 @@ export class TemplateHandler {
     // public methods
     //
 
-    public async process<T extends Binary>(templateFile: T, data: TemplateData): Promise<T> {
+    public async process<T extends Binary>(templateFile: T, data: TemplateData, deliveryTrace?: DeliveryTrace): Promise<T> {
         // load the docx file
         const docx = await this.loadDocx(templateFile);
 
@@ -96,6 +97,8 @@ export class TemplateHandler {
         for (const part of contentParts) {
             context.currentPart = part;
 
+            if (deliveryTrace) deliveryTrace.attachPart(part.path, await part.xmlRoot());
+
             // extensions - before compilation
             await this.callExtensions(this.options.extensions?.beforeCompilation, scopeData, context);
 
@@ -105,6 +108,7 @@ export class TemplateHandler {
 
             // extensions - after compilation
             await this.callExtensions(this.options.extensions?.afterCompilation, scopeData, context);
+            if (deliveryTrace) deliveryTrace.collectPart(part.path, await part.xmlRoot());
         }
 
         // export the result

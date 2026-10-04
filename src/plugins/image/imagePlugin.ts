@@ -1,3 +1,4 @@
+import { traceBeforeMutation, traceGeneratedTree } from '../../provenance/deliveryTrace.js';
 import { ScopeData, Tag, TemplateContext } from '../../compilation/index.js';
 import { ArgumentError } from '../../errors/index.js';
 import { MimeTypeHelper } from '../../mimeType.js';
@@ -41,6 +42,7 @@ export class ImagePlugin extends TemplatePlugin {
         const imageId = nextImageId++;
         const imageXml = this.createMarkup(imageId, relId, content);
 
+        traceGeneratedTree(imageXml, traceBeforeMutation(tag.xmlTextNode));
         XmlNode.insertAfter(imageXml, wordTextNode);
         XmlNode.remove(wordTextNode);
     }

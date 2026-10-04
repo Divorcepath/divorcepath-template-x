@@ -1,3 +1,4 @@
+import { traceSplit, traceJoin, traceAttribute, traceBeforeMutation } from '../provenance/deliveryTrace.js';
 import { XmlGeneralNode, XmlNode, XmlParser, XmlTextNode } from '../xml/index.js';
 import { Zip } from '../zip/index.js';
 import { Docx } from './docx.js';
@@ -65,6 +66,7 @@ export class DocxParser {
      */
     public splitTextNode(textNode: XmlTextNode, splitIndex: number, addBefore: boolean): XmlTextNode {
 
+        const originBefore = traceBeforeMutation(textNode);
         let firstXmlTextNode: XmlTextNode;
         let secondXmlTextNode: XmlTextNode;
 
@@ -102,6 +104,7 @@ export class DocxParser {
         firstXmlTextNode.textContent = firstText.substring(0, splitIndex);
         secondXmlTextNode.textContent = secondText.substring(splitIndex);
 
+        traceSplit(originBefore, firstXmlTextNode, secondXmlTextNode, splitIndex);
         return (addBefore ? firstXmlTextNode : secondXmlTextNode);
     }
 
@@ -209,6 +212,7 @@ export class DocxParser {
         const firstWordTextNode = this.containingTextNode(from);
         const secondWordTextNode = this.containingTextNode(to);
         const totalText: string[] = [];
+        const originInputs: ReturnType<typeof traceBeforeMutation>[] = [];
 
         // iterate runs
         let curRunNode = firstRunNode;
@@ -231,6 +235,7 @@ export class DocxParser {
                 // move text to first node
                 const curXmlTextNode = XmlNode.lastTextChild(curWordTextNode);
                 totalText.push(curXmlTextNode.textContent);
+                originInputs.push(traceBeforeMutation(curXmlTextNode));
 
                 // next text node
                 const textToRemove = curWordTextNode;
@@ -263,6 +268,7 @@ export class DocxParser {
         // set the text content
         const firstXmlTextNode = XmlNode.lastTextChild(firstWordTextNode);
         firstXmlTextNode.textContent = totalText.join('');
+        traceJoin(firstXmlTextNode, originInputs);
     }
 
     /**
@@ -289,7 +295,9 @@ export class DocxParser {
             node.attributes = {};
         }
         if (!node.attributes['xml:space']) {
+            const originBefore = traceBeforeMutation(node);
             node.attributes['xml:space'] = 'preserve';
+            traceAttribute(node, 'xml:space', originBefore);
         }
     }
 
