@@ -1,6 +1,7 @@
 import { expect, test } from 'bun:test';
 import {
     DeliveryTrace,
+    traceBeginEvaluation,
     traceSplit,
     traceJoin,
     traceGeneratedText,
@@ -192,4 +193,38 @@ test('post-snapshot structural edits fail tracked writes and invisible text chil
     trace.collectPart('part', tree);
     expect(trace.result().valid).toBe(false);
     expect(trace.projectStaticPart('part')).toBeNull();
+});
+
+test('only final retained generated intervals authorize their evaluation contribution', () => {
+    for (const retainGenerated of [true, false]) {
+        const generated = text('{value}'),
+            adjacent = text('STATIC');
+        const tree = root(generated, adjacent),
+            trace = new DeliveryTrace();
+        trace.attachPart('part', tree);
+        const evaluation = traceBeginEvaluation(generated)!;
+        evaluation.branch('root.choice', false);
+        const before = traceBeforeMutation(generated);
+        generated.textContent = 'VALUE';
+        traceGeneratedText(generated, before, evaluation);
+        const joined = [generated, adjacent].map(traceBeforeMutation);
+        generated.textContent = 'VALUESTATIC';
+        traceJoin(generated, joined);
+        XmlNode.remove(adjacent);
+        const split = traceBeforeMutation(generated);
+        const second = XmlNode.cloneNode(generated, true);
+        generated.textContent = 'VALUE';
+        second.textContent = 'STATIC';
+        traceSplit(split, generated, second, 5);
+        if (!retainGenerated) {
+            XmlNode.remove(generated);
+            XmlNode.appendChild(tree, second);
+        }
+        trace.collectPart('part', tree);
+        expect(trace.result().valid).toBe(true);
+        expect(trace.result().contributions).toHaveLength(retainGenerated ? 1 : 0);
+        if (retainGenerated)
+            expect(trace.result().contributions[0].events).toEqual([{ path: 'root.choice', selected: false }]);
+        expect(JSON.stringify(trace.result())).not.toContain('VALUE');
+    }
 });

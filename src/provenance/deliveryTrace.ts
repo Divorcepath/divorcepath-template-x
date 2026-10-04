@@ -1,3 +1,4 @@
+import type { Tag } from '../compilation/tag.js';
 import type { XmlNode, XmlTextNode } from '../xml/xmlNode.js';
 type SourceNode = {
     origin: number;
@@ -15,9 +16,38 @@ const escapeXml = (value: string) =>
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&apos;');
 
-export type OriginInterval = { origin: number; start: number; end: number };
+export type RepeatAncestor = { evaluationId: number; iteration: number };
+export type OriginInterval = {
+    origin: number;
+    start: number;
+    end: number;
+    contribution?: number;
+    ancestry?: RepeatAncestor[];
+};
+export type DeliveryEvaluation = {
+    id: number;
+    branch(path: string, selected: boolean): void;
+    invalidate(code: string): void;
+};
+export type SourceOccurrence = {
+    id: number;
+    part: string;
+    ordinal: number;
+    rawText: string;
+    disposition: string;
+    source: OriginInterval[];
+};
+type EvaluationRecord = {
+    id: number;
+    sourceOccurrenceId?: number;
+    ancestry?: RepeatAncestor[];
+    source: OriginInterval[];
+    events: { path: string; selected: boolean }[];
+};
+const evaluations = new WeakMap<DeliveryEvaluation, { owner: DeliveryTrace; record: EvaluationRecord }>();
 type NodeState = {
     owner: DeliveryTrace;
+    part: string;
     origin: number;
     nodeType: string;
     nodeName: string;
@@ -25,6 +55,7 @@ type NodeState = {
     expectedText?: string;
     expectedAttributes?: Record<string, string>;
     sourceAttributeNames?: string[];
+    ancestry?: RepeatAncestor[];
 };
 // This registry holds no ambient/current render. Every node carries its own owner;
 // concurrent render calls and recursive compilers cannot select another observer.
@@ -44,11 +75,22 @@ export type DeliveryTraceResult = {
     authoringReady: false;
     valid: boolean;
     diagnostic: string | null;
+    contributions: EvaluationRecord[];
+    containers: {
+        evaluationId: number;
+        openOccurrenceId: number;
+        closeOccurrenceId: number;
+        count: number;
+        condition: boolean;
+        ancestry: RepeatAncestor[];
+    }[];
     parts: {
         path: string;
         origins: number[];
         text: OriginInterval[];
         attributes: { origin: number; names: string[] }[];
+        contributions: number[];
+        instances: RepeatAncestor[];
     }[];
 };
 
@@ -60,6 +102,11 @@ export class DeliveryTrace {
     private sourceBytes = 0;
     private receiptBytes = 0;
     private diagnostic: string | null = null;
+    private readonly containers: DeliveryTraceResult['containers'] = [];
+    private repeatCount = 0;
+    private readonly partTagCounts = new Map<string, number>();
+    private readonly sourceTags = new Map<string, SourceOccurrence>();
+    private readonly evaluationRecords: EvaluationRecord[] = [];
     private readonly roots = new Map<string, XmlNode>();
     private readonly sources = new Map<string, SourceNode>();
     private readonly collected: DeliveryTraceResult['parts'] = [];
@@ -77,6 +124,138 @@ export class DeliveryTrace {
             return false;
         }
         return true;
+    }
+
+    registerTag(tag: Tag, state: NodeState): void {
+        if (state.intervals.some(span => !span.origin) || state.expectedText !== tag.rawText) {
+            this.invalidate('deliveryScope.untrackedTag');
+            return;
+        }
+        const key = this.tagKey(state);
+        const existing = this.sourceTags.get(key);
+        if (existing) {
+            if (existing.rawText !== tag.rawText || existing.disposition !== tag.disposition)
+                this.invalidate('deliveryScope.untrackedTag');
+            return;
+        }
+        if (!this.event(state.intervals.length)) return;
+        this.sourceBytes += tag.rawText.length * 2;
+        if (this.sourceBytes > DELIVERY_TRACE_LIMITS.sourceBytes) {
+            this.invalidate('deliveryScope.proofLimit');
+            return;
+        }
+        this.sourceTags.set(key, {
+            id: this.sourceTags.size + 1,
+            part: state.part,
+            ordinal: this.partTagCounts.get(state.part) ?? 0,
+            rawText: tag.rawText,
+            disposition: tag.disposition,
+            source: state.intervals.map(span => ({ ...span }))
+        });
+        this.partTagCounts.set(state.part, (this.partTagCounts.get(state.part) ?? 0) + 1);
+    }
+
+    recordContainer(
+        open: NodeState,
+        close: NodeState,
+        evaluation: DeliveryEvaluation,
+        count: number,
+        condition: boolean
+    ): void {
+        const binding = evaluations.get(evaluation);
+        const openId = this.sourceTags.get(this.tagKey(open))?.id;
+        const closeId = this.sourceTags.get(this.tagKey(close))?.id;
+        if (
+            !binding ||
+            binding.owner !== this ||
+            !openId ||
+            !closeId ||
+            close.owner !== this ||
+            !Number.isSafeInteger(count) ||
+            count < 0
+        ) {
+            this.invalidate();
+            return;
+        }
+        this.repeatCount += count;
+        if (this.repeatCount > 10_000 || !this.event()) {
+            this.invalidate('deliveryScope.proofLimit');
+            return;
+        }
+        this.receiptBytes += 160 + (open.ancestry?.length ?? 0) * 64;
+        if (this.receiptBytes > DELIVERY_TRACE_LIMITS.receiptBytes) {
+            this.invalidate('deliveryScope.proofLimit');
+            return;
+        }
+        this.containers.push({
+            evaluationId: evaluation.id,
+            openOccurrenceId: openId,
+            closeOccurrenceId: closeId,
+            count,
+            condition,
+            ancestry: [...(open.ancestry ?? [])]
+        });
+    }
+
+    private tagKey(state: NodeState): string {
+        return JSON.stringify([state.part, state.intervals.map(span => [span.origin, span.start, span.end])]);
+    }
+
+    /** Server-only source bridge. Never include this inventory in delivery receipts. */
+    sourceOccurrences(): SourceOccurrence[] {
+        return this.diagnostic
+            ? []
+            : [...this.sourceTags.values()].map(item => ({ ...item, source: item.source.map(span => ({ ...span })) }));
+    }
+
+    beginEvaluation(state: NodeState): DeliveryEvaluation | undefined {
+        const ancestryKey = JSON.stringify(state.ancestry ?? []);
+        if (state.intervals.some(span => JSON.stringify(span.ancestry ?? []) !== ancestryKey)) {
+            this.invalidate('deliveryScope.ambiguousAncestry');
+            return undefined;
+        }
+        if (!this.event(state.intervals.length)) return undefined;
+        this.receiptBytes +=
+            128 +
+            (state.ancestry?.length ?? 0) * 64 +
+            state.intervals.reduce((size, span) => size + 80 + (span.ancestry?.length ?? 0) * 64, 0);
+        if (this.receiptBytes > DELIVERY_TRACE_LIMITS.receiptBytes) {
+            this.invalidate('deliveryScope.proofLimit');
+            return undefined;
+        }
+        const record: EvaluationRecord = {
+            id: this.evaluationRecords.length + 1,
+            sourceOccurrenceId: this.sourceTags.get(this.tagKey(state))?.id,
+            ancestry: [...(state.ancestry ?? [])],
+            source: state.intervals.map(span => ({ ...span })),
+            events: []
+        };
+        this.evaluationRecords.push(record);
+        const decisions = new Map<string, boolean>();
+        const handle: DeliveryEvaluation = {
+            id: record.id,
+            branch: (path, selected) => {
+                if (record.events.length >= 1024 || path.length > 1024) {
+                    this.invalidate('deliveryScope.proofLimit');
+                    return;
+                }
+                if (decisions.has(path) && decisions.get(path) !== selected) {
+                    this.invalidate('deliveryScope.ambiguousEvaluation');
+                    return;
+                }
+                decisions.set(path, selected);
+                if (!this.event()) return;
+                this.receiptBytes += path.length * 6 + 64;
+                if (this.receiptBytes > DELIVERY_TRACE_LIMITS.receiptBytes) {
+                    this.invalidate('deliveryScope.proofLimit');
+                    return;
+                }
+                record.events.push({ path, selected });
+            },
+            invalidate: code => this.invalidate(code)
+        };
+        evaluations.set(handle, { owner: this, record });
+        return handle;
     }
 
     attachPart(path: string, root: XmlNode): void {
@@ -119,6 +298,7 @@ export class DeliveryTrace {
             if (!this.event(intervals.length)) break;
             states.set(node, {
                 owner: this,
+                part: path,
                 origin,
                 nodeType: node.nodeType,
                 nodeName: node.nodeName,
@@ -181,9 +361,18 @@ export class DeliveryTrace {
             this.invalidate();
             return;
         }
-        const result: DeliveryTraceResult['parts'][number] = { path, origins: [], text: [], attributes: [] };
+        const result: DeliveryTraceResult['parts'][number] = {
+            path,
+            origins: [],
+            text: [],
+            attributes: [],
+            contributions: [],
+            instances: []
+        };
         const pending = [root];
         let visited = 0;
+        const contributions = new Set<number>();
+        const instances = new Map<string, RepeatAncestor>();
         while (pending.length && !this.diagnostic) {
             const node = pending.pop()!;
             let depth = 0;
@@ -232,26 +421,36 @@ export class DeliveryTrace {
             }
             this.receiptBytes +=
                 128 +
-                state.intervals.length * 80 +
+                (state.ancestry?.length ?? 0) * 64 +
+                state.intervals.reduce((size, span) => size + 80 + (span.ancestry?.length ?? 0) * 64, 0) +
                 Object.keys(attrs).reduce((size, key) => size + key.length * 6 + 16, 0);
             if (this.receiptBytes > DELIVERY_TRACE_LIMITS.receiptBytes) {
                 this.invalidate('deliveryScope.proofLimit');
                 break;
             }
             result.text.push(...state.intervals.filter(span => span.origin !== 0));
+            for (const ancestor of [...(state.ancestry ?? []), ...state.intervals.flatMap(span => span.ancestry ?? [])])
+                instances.set(`${ancestor.evaluationId}:${ancestor.iteration}`, ancestor);
+            for (const span of state.intervals)
+                if (span.contribution && span.end > span.start) contributions.add(span.contribution);
             pending.push(...(node.childNodes ?? []).slice().reverse());
         }
+        result.contributions = [...contributions];
+        result.instances = [...instances.values()];
         if (!this.diagnostic) this.collected.push(result);
     }
 
     result(): DeliveryTraceResult {
         if (this.collected.length !== this.roots.size) this.invalidate();
+        const delivered = new Set(this.collected.flatMap(part => part.contributions));
         return {
             schemaVersion: 1,
             scope: 'xml-origin-trace',
             authoringReady: false,
             valid: !this.diagnostic,
             diagnostic: this.diagnostic,
+            containers: this.diagnostic ? [] : this.containers,
+            contributions: this.diagnostic ? [] : this.evaluationRecords.filter(record => delivered.has(record.id)),
             parts: this.diagnostic ? [] : this.collected
         };
     }
@@ -310,8 +509,7 @@ function sliceIntervals(intervals: OriginInterval[], start: number, end: number)
         const length = span.end - span.start;
         const left = Math.max(start, offset);
         const right = Math.min(end, offset + length);
-        if (left < right)
-            result.push({ origin: span.origin, start: span.start + left - offset, end: span.start + right - offset });
+        if (left < right) result.push({ ...span, start: span.start + left - offset, end: span.start + right - offset });
         offset += length;
     }
     return result;
@@ -356,12 +554,39 @@ export function traceJoin(target: XmlTextNode, found: (NodeState | undefined)[])
     states.set(target, { ...state, intervals, expectedText: target.textContent });
 }
 
-export function traceGeneratedText(node: XmlTextNode, state: NodeState | undefined): void {
+export function traceRegisterTag(tag: Tag): void {
+    const state = traceBeforeMutation(tag.xmlTextNode);
+    if (state) state.owner.registerTag(tag, state);
+}
+
+export function traceBeginEvaluation(node: XmlNode): DeliveryEvaluation | undefined {
+    const state = traceBeforeMutation(node);
+    return state?.owner.beginEvaluation(state);
+}
+
+export function traceGeneratedText(
+    node: XmlTextNode,
+    state: NodeState | undefined,
+    evaluation?: DeliveryEvaluation
+): void {
     if (!state || !requireNodeShape(node, state) || !state.owner.event()) return;
+    const binding = evaluation && evaluations.get(evaluation);
+    if (evaluation && (!binding || binding.owner !== state.owner)) {
+        state.owner.invalidate();
+        return;
+    }
     states.set(node, {
         ...state,
         expectedText: node.textContent,
-        intervals: [{ origin: 0, start: 0, end: node.textContent.length }]
+        intervals: [
+            {
+                origin: 0,
+                start: 0,
+                end: node.textContent.length,
+                ...(binding ? { contribution: binding.record.id } : {}),
+                ...(state.ancestry ? { ancestry: state.ancestry } : {})
+            }
+        ]
     });
 }
 
@@ -396,6 +621,8 @@ export function traceGeneratedTree(root: XmlNode, anchor: ReturnType<typeof trac
             }
             states.set(node, {
                 owner: anchor.owner,
+                part: anchor.part,
+                ancestry: anchor.ancestry,
                 origin: 0,
                 nodeType: node.nodeType,
                 nodeName: node.nodeName,
@@ -406,5 +633,52 @@ export function traceGeneratedTree(root: XmlNode, anchor: ReturnType<typeof trac
             });
         }
         pending.push(...(node.childNodes ?? []).slice().reverse());
+    }
+}
+
+export function traceContainerDecision(
+    open: XmlNode,
+    close: XmlNode,
+    evaluation: DeliveryEvaluation | undefined,
+    count: number,
+    condition: boolean
+): void {
+    const openState = traceBeforeMutation(open),
+        closeState = traceBeforeMutation(close);
+    if (openState && closeState && evaluation)
+        openState.owner.recordContainer(openState, closeState, evaluation, count, condition);
+}
+
+export function traceRepeatInstance(
+    root: XmlNode,
+    evaluation: DeliveryEvaluation | undefined,
+    iteration: number
+): void {
+    if (!evaluation) return;
+    const binding = evaluations.get(evaluation);
+    if (!binding) return;
+    const pending = [root];
+    while (pending.length) {
+        const node = pending.pop()!;
+        const state = traceBeforeMutation(node);
+        if (!state || state.owner !== binding.owner) {
+            binding.owner.invalidate();
+            return;
+        }
+        if (!state.owner.event(state.intervals.length)) return;
+        const ancestry = [...(state.ancestry ?? []), { evaluationId: evaluation.id, iteration }];
+        if (ancestry.length > DELIVERY_TRACE_LIMITS.depth) {
+            binding.owner.invalidate('deliveryScope.proofLimit');
+            return;
+        }
+        states.set(node, {
+            ...state,
+            ancestry,
+            intervals: state.intervals.map(span => ({
+                ...span,
+                ancestry: [...(span.ancestry ?? []), { evaluationId: evaluation.id, iteration }]
+            }))
+        });
+        pending.push(...(node.childNodes ?? []));
     }
 }

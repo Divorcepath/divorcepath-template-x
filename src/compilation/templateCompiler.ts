@@ -1,3 +1,4 @@
+import { traceRegisterTag } from '../provenance/deliveryTrace.js';
 import { UnclosedTagError, UnknownContentTypeError, UnopenedTagError } from '../errors/index.js';
 import { PluginContent, TemplatePlugin } from '../plugins/index.js';
 import { IMap } from '../types.js';
@@ -53,6 +54,7 @@ export class TemplateCompiler {
     public parseTags(node: XmlNode): Tag[] {
         const delimiters = this.delimiterSearcher.findDelimiters(node);
         const tags = this.tagParser.parse(delimiters);
+        tags.forEach(traceRegisterTag);
         return tags;
     }
 

@@ -1,3 +1,5 @@
+import { traceBeginEvaluation, type DeliveryEvaluation } from '../provenance/deliveryTrace.js';
+import type { XmlNode } from '../xml/xmlNode.js';
 import getProp from 'lodash.get';
 import { TemplateContent, TemplateData } from '../templateData.js';
 import { isNumber, last } from '../utils/index.js';
@@ -12,12 +14,13 @@ export interface ScopeDataArgs {
      */
     strPath: string[];
     data: TemplateData;
+    /** Private evidence callback for an explicitly consumed evaluation. Never serialized. */
+    deliveryEvaluation?: DeliveryEvaluation;
 }
 
 export type ScopeDataResolver = (args: ScopeDataArgs) => TemplateContent | TemplateData[];
 
 export class ScopeData {
-
     public static defaultResolver(args: ScopeDataArgs): TemplateContent | TemplateData[] {
         let result: any;
 
@@ -52,14 +55,22 @@ export class ScopeData {
     }
 
     public pathString(): string {
-        return this.strPath.join(".");
+        return this.strPath.join('.');
     }
 
-    public getScopeData<T extends TemplateContent | TemplateData[]>(): T {
+    public getScopeDataForDelivery<T extends TemplateContent | TemplateData[]>(
+        node: XmlNode
+    ): { value: T; evaluation?: DeliveryEvaluation } {
+        const evaluation = traceBeginEvaluation(node);
+        return { value: this.getScopeData<T>(evaluation), evaluation };
+    }
+
+    public getScopeData<T extends TemplateContent | TemplateData[]>(evaluation?: DeliveryEvaluation): T {
         const args: ScopeDataArgs = {
             path: this.path,
             strPath: this.strPath,
-            data: this.allData
+            data: this.allData,
+            ...(evaluation ? { deliveryEvaluation: evaluation } : {})
         };
         if (this.scopeDataResolver) {
             return this.scopeDataResolver(args) as T;

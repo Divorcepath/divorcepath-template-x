@@ -160,3 +160,60 @@ test('actual undeclared node-type mutation cannot restore absent text in source 
     expect(trace.result()).toMatchObject({ valid: false, diagnostic: 'deliveryScope.untrackedMutation' });
     expect(trace.projectStaticPart('word/document.xml')).toBeNull();
 });
+
+test('plugin detection evaluations do not authorize discarded branch decisions', async () => {
+    const bytes = fixture('{value}');
+    let calls = 0;
+    const resolver = (args: any) => {
+        const selected = ++calls === 1;
+        args.deliveryEvaluation?.branch('root.choice', selected);
+        return selected ? 'DISCARDED_BRANCH_SENTINEL' : 'DELIVERED_BRANCH';
+    };
+    const expected = await new BaselineHandler({ scopeDataResolver: resolver }).process(bytes, {});
+    const expectedCalls = calls;
+    calls = 0;
+    const trace = new DeliveryTrace();
+    const actual = await new TemplateHandler({ scopeDataResolver: resolver }).process(bytes, {}, trace);
+    expect(calls).toBe(expectedCalls);
+    expect(parts(actual)).toEqual(parts(expected));
+    expect(JSON.stringify(parts(actual))).not.toContain('DISCARDED_BRANCH_SENTINEL');
+    expect(trace.result().contributions).toHaveLength(1);
+    expect(trace.result().contributions[0].events).toEqual([{ path: 'root.choice', selected: false }]);
+});
+
+test('private source occurrence bridge deduplicates repeat clones without exposing raw expressions', async () => {
+    const bytes = fixture('{#rows}{name}{/rows}');
+    const trace = new DeliveryTrace();
+    await new TemplateHandler().process(bytes, { rows: [{ name: 'A' }, { name: 'B' }] }, trace);
+    const source = trace.sourceOccurrences();
+    expect(source.map(item => item.rawText)).toEqual(['{#rows}', '{name}', '{/rows}']);
+    expect(source.map(item => item.ordinal)).toEqual([0, 1, 2]);
+    expect(trace.result().contributions.map(item => item.sourceOccurrenceId)).toEqual([2, 2]);
+    expect(JSON.stringify(trace.result())).not.toContain('{name}');
+    expect(JSON.stringify(trace.result())).not.toContain('{#rows}');
+});
+
+test('nested repeat contributions preserve actual ancestry and container decisions', async () => {
+    const bytes = fixture('{#rows}{name}{#children}{name}{/children}{/rows}');
+    const data = {
+        rows: [
+            { name: 'OuterA', children: [{ name: 'InnerA' }, { name: 'InnerB' }] },
+            { name: 'OuterB', children: [] }
+        ]
+    };
+    const trace = new DeliveryTrace();
+    const rendered = await new TemplateHandler().process(bytes, data, trace);
+    expect(parts(rendered)).toEqual(parts(await new BaselineHandler().process(bytes, data)));
+    const receipt = trace.result();
+    expect(receipt.valid).toBe(true);
+    expect(receipt.containers.map(item => item.count)).toEqual([2, 2, 0]);
+    expect(receipt.contributions.map(item => item.ancestry?.map(ancestor => ancestor.iteration))).toEqual([
+        [0],
+        [0, 0],
+        [0, 1],
+        [1]
+    ]);
+    expect(receipt.contributions[1].ancestry?.[1].evaluationId).toBe(receipt.containers[1].evaluationId);
+    expect(JSON.stringify(receipt)).not.toContain('OuterA');
+    expect(JSON.stringify(receipt)).not.toContain('InnerB');
+});
