@@ -1,3 +1,4 @@
+import { traceClone } from '../provenance/deliveryTrace.js';
 import { MissingArgumentError } from '../errors/index.js';
 import { IMap } from '../types.js';
 import { last } from '../utils/index.js';
@@ -224,6 +225,7 @@ export const XmlNode = {
             clone.parentNode = null;
             clone.childNodes = node.childNodes ? [] : null;
             clone.nextSibling = null;
+            traceClone(node, clone);
             return clone;
         } else {
             const clone = cloneNodeDeep(node);
@@ -559,6 +561,8 @@ function cloneNodeDeep<T extends XmlNode>(original: T): T {
             (clone as XmlGeneralNode).attributes = Object.assign({}, attributes);
         }
     }
+
+    traceClone(original, clone);
 
     // children
     if (original.childNodes) {

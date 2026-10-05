@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.types.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "types": ["node"],
+    "noUnusedLocals": false
+  },
+  "include": ["src/**/*", "docs/provenance/typecheck-globals.d.ts"]
+}

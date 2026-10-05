@@ -1,3 +1,4 @@
+import { traceBeforeMutation, traceGeneratedTree } from '../../../provenance/deliveryTrace.js';
 import type { Tag } from '../../../compilation/index.ts';
 import { XmlNode, XmlParser } from '../../../xml/index.js';
 import type { PluginUtilities } from '../../templatePlugin.ts';
@@ -70,8 +71,16 @@ export class LoopParagraphStrategy implements ILoopStrategy {
         lastParagraph: XmlNode,
         section: Section
     ): void {
-        const { name, id, hidden = false, appearance = 'hidden', lock = false } = section;
+        const { name, id, hidden = false, appearance = 'hidden', lock = false, hideMode } = section;
 
+        // If hideMode is "excludable" and hidden is true, remove everything (no output)
+        if (hideMode === "excludable" && hidden === true) {
+            XmlNode.remove(lastParagraph);
+            XmlNode.remove(firstParagraph);
+            return;
+        }
+
+        const provenanceAnchor = traceBeforeMutation(firstParagraph);
         const tag = name;
 
         const sdtTemplate = `
@@ -105,6 +114,7 @@ export class LoopParagraphStrategy implements ILoopStrategy {
         if (hidden) {
             this.vanishNode(sdtContent);
         }
+        traceGeneratedTree(sdtNode, provenanceAnchor);
     }
 
     private vanishNode(node: XmlNode): void {
