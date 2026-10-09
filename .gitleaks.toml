@@ -1,0 +1,35 @@
+title = "Divorcepath secret scanning"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Generated, vendored, and local tool output paths."
+paths = [
+  '''(^|/)node_modules/''',
+  '''(^|/)build/''',
+  '''(^|/)dist/''',
+  '''(^|/)coverage/''',
+  '''(^|/)playwright-report/''',
+  '''(^|/)test-results/''',
+  '''(^|/)tmp/''',
+]
+
+# Sanity API tokens: "sk" followed by a long alphanumeric string (180 chars in practice).
+# Not covered by the default rules; one was committed in a curl header.
+[[rules]]
+id = "sanity-api-token"
+description = "Sanity API token"
+regex = '''\b(sk[a-zA-Z0-9]{100,})\b'''
+keywords = ["sk"]
+entropy = 3.5
+
+# Literal bearer tokens in Authorization headers, including escaped quotes inside JSON
+# or package.json scripts. Variable references ($TOKEN, ${{ secrets.X }}) don't match.
+[[rules]]
+id = "authorization-bearer-token"
+description = "Hard-coded bearer token in an Authorization header"
+regex = '''(?i)authorization\\?["']?\s*:\s*bearer\s+([a-z0-9._~+/=-]{20,})'''
+secretGroup = 1
+keywords = ["bearer"]
+entropy = 3.5

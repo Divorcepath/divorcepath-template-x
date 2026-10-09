@@ -1,0 +1,92 @@
+name: Gitleaks
+
+# Blocks new secrets: pull requests scan only their own commits, and pushes to
+# master scan only the pushed range, so existing history doesn't fail every
+# build. Run manually (workflow_dispatch) for a report-only full-history baseline.
+on:
+  pull_request:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gitleaks-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GITLEAKS_VERSION: "8.28.0"
+
+jobs:
+  gitleaks:
+    name: Gitleaks secret scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      # actions/checkout v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Scan for secrets
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+          PUSH_AFTER: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          mkdir -p gitleaks-report
+          exit_code=1
+          case "$EVENT_NAME" in
+            pull_request) log_opts="${PR_BASE_SHA}..${PR_HEAD_SHA}" ;;
+            push)
+              if [ -z "$PUSH_BEFORE" ] || [ "$PUSH_BEFORE" = "0000000000000000000000000000000000000000" ]; then
+                log_opts="-1 ${PUSH_AFTER}"
+              else
+                log_opts="${PUSH_BEFORE}..${PUSH_AFTER}"
+              fi ;;
+            *) log_opts="--remotes=origin"; exit_code=0 ;;
+          esac
+          config_args=()
+          if [ -f .gitleaks.toml ]; then config_args=(--config /repo/.gitleaks.toml); fi
+          echo "Scanning: ${log_opts} (fail on findings: $([ "$exit_code" = 1 ] && echo yes || echo no))"
+          docker run --rm -v "$PWD:/repo" -w /repo "zricethezav/gitleaks:v${GITLEAKS_VERSION}" \
+            git /repo "${config_args[@]}" \
+            --log-opts="${log_opts}" \
+            --redact=100 \
+            --no-banner \
+            --report-format json \
+            --report-path /repo/gitleaks-report/gitleaks.json \
+            --exit-code "${exit_code}"
+
+      - name: Summarize findings
+        if: always()
+        run: |
+          f=gitleaks-report/gitleaks.json
+          if [ ! -s "$f" ]; then echo "No report produced." >> "$GITHUB_STEP_SUMMARY"; exit 0; fi
+          n=$(jq length "$f")
+          {
+            echo "### Gitleaks: ${n} finding(s)"
+            if [ "$n" -gt 0 ]; then
+              echo ""
+              echo "| Rule | File | Line | Commit |"
+              echo "|---|---|---|---|"
+              jq -r '.[] | "| \(.RuleID) | `\(.File)` | \(.StartLine) | \(.Commit[0:9]) |"' "$f"
+              echo ""
+              echo "Secret values are redacted. Remove the secret, rotate it with its provider, and rewrite the commit before merging. If it's a false positive, allowlist it in \`.gitleaks.toml\`."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # actions/upload-artifact v7
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: always()
+        with:
+          name: gitleaks-report
+          path: gitleaks-report/gitleaks.json
+          if-no-files-found: ignore
+          retention-days: 90
