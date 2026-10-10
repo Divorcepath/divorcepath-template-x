@@ -29,7 +29,7 @@ entropy = 3.5
 [[rules]]
 id = "authorization-bearer-token"
 description = "Hard-coded bearer token in an Authorization header"
-regex = '''(?i)authorization\\?["']?\s*:\s*bearer\s+([a-z0-9._~+/=-]{20,})'''
+regex = '''(?i)authorization\\?["'`]?\s*:\s*\\?["'`]?\s*bearer\s+([a-z0-9._~+/=-]{20,})'''
 secretGroup = 1
 keywords = ["bearer"]
 entropy = 3.5
