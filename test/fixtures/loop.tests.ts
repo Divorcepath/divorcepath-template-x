@@ -36,9 +36,11 @@ describe('loop fixtures', () => {
 
             const handler = new TemplateHandler();
 
+            // Table-row loops use the Divorcepath `{%...}` table-loop tag (81a3efe moved row loops
+            // out of `{#...}`); this fixture was updated to `{%loop}` in that commit.
             const template = readFixture("loop - table.docx");
             const templateText = await handler.getText(template);
-            expect(templateText.trim()).toEqual("{#loop}Repeat this text {prop} And this also…{/loop}");
+            expect(templateText.trim()).toEqual("{%loop}Repeat this text {prop} And this also…{/loop}");
 
             const data = {
                 outProp: 'I am out!',
@@ -447,8 +449,11 @@ describe('loop fixtures', () => {
 
             const doc = await handler.process(template, data);
 
+            // Divorcepath fork (81a3efe): `{#...}` loops no longer have a table strategy, so
+            // `loopOver:"row"` doesn't repeat rows for them; row repetition (including
+            // `loopOver:"row"`) is handled by the `{%...}` table-loop tag instead.
             const docText = await handler.getText(doc);
-            expect(docText).toEqual("[Row1]val1val2val3val4[Row2]val5[Row2]val6[Row3]val7val8");
+            expect(docText).toEqual("[Row1]val1val2val3val4[Row2]val5val6[Row3]val7val8");
 
             const docXml = await handler.getXml(doc);
             expect(docXml).toMatchSnapshot();
