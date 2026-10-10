@@ -12,7 +12,7 @@ export class Zip {
             // const zip = pizzip.load(file as any, { optimizedBinaryString: true });
             return new Zip(pizzip);
         } catch (error) {
-            console.log(error)
+            console.log(error);
             throw error;
         }
 

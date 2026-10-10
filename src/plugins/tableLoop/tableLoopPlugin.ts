@@ -23,7 +23,7 @@ export class TableLoopPlugin extends TemplatePlugin {
         // Non array value - treat as a boolean condition.
         const isCondition = !Array.isArray(value);
         if (isCondition) {
-            if (!!value) {
+            if (value) {
                 value = [{}];
             } else {
                 value = [];

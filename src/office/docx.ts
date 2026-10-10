@@ -1,7 +1,7 @@
 import { MalformedFileError } from '../errors';
 import { Constructor, IMap } from '../types';
 import { Binary, last } from '../utils';
-import { XmlGeneralNode, XmlNode, XmlNodeType, XmlParser } from '../xml';
+import { XmlGeneralNode, XmlNodeType, XmlParser } from '../xml';
 import { Zip } from '../zip';
 import { ContentPartType } from './contentPartType';
 import { ContentTypesFile } from './contentTypesFile';
