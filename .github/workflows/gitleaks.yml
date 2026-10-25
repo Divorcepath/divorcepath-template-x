@@ -13,8 +13,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: gitleaks-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   GITLEAKS_VERSION: "8.28.0"
@@ -22,7 +22,7 @@ env:
 jobs:
   gitleaks:
     name: Gitleaks secret scan
-    runs-on: ubuntu-latest
+    runs-on: dp-2cpu-x64
     timeout-minutes: 15
     steps:
       # actions/checkout v6
